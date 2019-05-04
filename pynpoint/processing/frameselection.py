@@ -443,6 +443,51 @@ class FrameSelectionModule(ProcessingModule):
         self.m_image_in_port.close_port()
 
 
+class FrameComparisonModule(ProcessingModule):
+    """
+    Pipeline module which compares different frames using different techniques.
+    """
+
+    def __init__(self,
+                 name_in="frame_comparison",
+                 image_in_tag="im_arr",
+                 image_out_tag="im_arr_comp",
+                 method="MSE",
+                 threshold=5.):
+        """
+        Constructor of FrameComparisonModule
+
+        Parameters
+        ----------
+        name_in : str
+            Unique name of the module instance.
+        image_in_tag : str
+            Tag of the database entry that is read as input.
+        image_out_tag : str
+            Tag of the database entry that is written as output. Should be different from
+            *image_in_tag*.
+
+        Returns
+        -------
+        NoneType
+            None
+        """
+
+        super(FrameComparisonModule, self).__init__(name_in)
+
+        self.m_image_in_port = self.add_input_port(image_in_tag)
+        self.m_image_out_port = self.add_output_port(image_out_tag)
+
+        assert method in ['MSE', 'PCC', 'SSIM'], "The chosen method {} is not available. Please ensure that you have selected one of, 'MSE', 'PCC', 'SSIM'".format(str(method))
+        self.m_method = method
+
+        self.m_threshold = threshold
+        # TODO:
+        # - MSE
+        # - PCC
+        # - SSIM 
+
+
 class RemoveLastFrameModule(ProcessingModule):
     """
     Pipeline module for removing every NDIT+1 frame from NACO data obtained in cube mode. This
