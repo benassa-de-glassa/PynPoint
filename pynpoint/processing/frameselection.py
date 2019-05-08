@@ -624,6 +624,115 @@ class FrameSimilarityModule(ProcessingModule):
         return similarity
         """ 
 
+class RemoveFramesBySimilarityModule(ProcessingModule):
+    """
+    Pipeline module which measures the similarity frames using different techniques.
+    """
+
+    def __init__(self,
+                 name_in="frame_selection",
+                 image_in_tag="im_arr",
+                 selected_out_tag="im_arr_selected",
+                 removed_out_tag="im_arr_removed",
+                 index_out_tag="index_selected",
+                 method="MSE",
+                 frames=100):
+        """
+        Constructor of RemoveFramesBySimilarityModule
+
+        Parameters
+        ----------
+        name_in : str
+            Unique name of the module instance.
+        image_tag : str
+            Tag of the database entry that is read as input.
+
+        Returns
+        -------
+        NoneType
+            None
+        """
+
+        super(RemoveFramesBySimilarityModule, self).__init__(name_in)
+
+        self.m_image_in_port = self.add_input_port(image_in_tag)
+        self.m_selected_out_port = self.add_output_port(selected_out_tag)
+        self.m_removed_out_port = self.add_output_port(removed_out_tag)
+
+        assert method in ['MSE', 'PCC', 'SSIM'], "The chosen method {} is not available. Please ensure that you have selected one of, 'MSE', 'PCC', 'SSIM'".format(str(method))
+        self.m_method = method
+        self.m_frames = frames
+
+    def _initialize(self):
+        if self.m_image_in_port.tag == self.m_selected_out_port.tag or \
+                self.m_image_in_port.tag == self.m_removed_out_port.tag:
+            raise ValueError("Input and output ports should have a different tag.")
+
+        if self.m_selected_out_port is not None:
+            self.m_selected_out_port.del_all_data()
+            self.m_selected_out_port.del_all_attributes()
+            print("removed all old data")
+
+        if self.m_removed_out_port is not None:
+            self.m_removed_out_port.del_all_data()
+            self.m_removed_out_port.del_all_attributes()
+            print("removed all old data")
+
+    def run(self):
+        """
+        Run function of RemoveFramesBySimilarityModule
+        """
+        self._initialize()
+        images = self.m_image_in_port.get_all()
+        nimages = images.shape[0]
+        
+        similarity = self.m_image_in_port.get_attribute("SIMILARITY_{}".format(self.m_method))
+        index = self.m_image_in_port.get_attribute("INDEX")
+        # sort similarity in ascending order
+        sorting_order = np.argsort(similarity)
+        similarity = similarity[sorting_order]
+        index = index[sorting_order]
+
+        removed_index = index[:self.m_frames]
+        selected_index = index[self.m_frames:]
+
+        indices = removed_index
+        if np.size(indices) > 0:
+            memory = self._m_config_port.get_attribute("MEMORY")
+            frames = memory_frames(memory, nimages)
+
+            if memory == 0 or memory >= nimages:
+                memory = nimages
+
+            for i, _ in enumerate(frames[:-1]):
+                images = self.m_image_in_port[frames[i]:frames[i+1], ]
+
+                index_del = np.where(np.logical_and(indices >= frames[i], \
+                                                    indices < frames[i+1]))
+
+                write_selected_data(images,
+                                    indices[index_del]%memory,
+                                    self.m_removed_out_port,
+                                    self.m_selected_out_port)
+
+        else:
+            warnings.warn("No frames were removed.")
+
+
+        if self.m_selected_out_port is not None:
+            # Copy attributes before write_selected_attributes is used
+            self.m_selected_out_port.copy_attributes(self.m_image_in_port)
+
+        if self.m_removed_out_port is not None:
+            # Copy attributes before write_selected_attributes is used
+            self.m_removed_out_port.copy_attributes(self.m_image_in_port)
+
+        # write the selected and removed data to the respective output ports
+        # write_selected_data(images, selected_index, self.m_selected_out_port, self.m_removed_out_port)
+        write_selected_attributes(selected_index, 
+            self.m_image_in_port, 
+            self.m_removed_out_port,
+            self.m_selected_out_port)       
 
 class RemoveLastFrameModule(ProcessingModule):
     """
