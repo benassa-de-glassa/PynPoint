@@ -99,6 +99,18 @@ def get_attributes():
             'FILES':{'attribute':'non-static',
                      'config':None,
                      'value':None,
-                     'type':'str'}}
+                     'type':'str'},
+            'COHERENCE_TIME':{'attribute':'non-static',
+                            'config':'header',
+                            'value': 'ESO TEL AMBI TAU0',
+                            'type':'float'},
+            'SEEING_FWHM_END':{'attribute':'non-static',
+                            'config':'header',
+                            'value': 'ESO TEL AMBI FWHM END',
+                            'type':'float'},
+            'SEEING_FWHM_START':{'attribute':'non-static',
+                            'config':'header',
+                            'value': 'SO TEL AMBI FWHM START',
+                            'type':'float'}}
 
     return attr

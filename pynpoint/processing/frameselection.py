@@ -522,6 +522,11 @@ class FrameSimilarityModule(ProcessingModule):
             return PCC
         
         elif mode =="SSIM":
+            from skimage.measure import compare_ssim as ssim
+            if int(self.m_fwhm) % 2 == 0: winsize = int(fwhm) + 1
+            else: winsize = int(fwhm)
+            return ssim(X_i, M, win_size=winsize)
+            '''
             c1, c2, c3 = 1e-8, 1e-8, 1e-8
 
             def L_i(reference_index, images):
@@ -565,6 +570,7 @@ class FrameSimilarityModule(ProcessingModule):
 
             # return average of SSIM
             return SSIM / self.m_N_pix
+            '''
 
     def run(self):
         """
@@ -624,6 +630,62 @@ class FrameSimilarityModule(ProcessingModule):
         return similarity
         """ 
 
+class FrameSortingModule(ProcessingModule):
+    """
+    Pipeline module to sort frames in ascending order according to a given attribute.
+    """
+    def __init__(self,
+                 name_in="sort_frames",
+                 image_in_tag="im_arr",
+                 image_out_tag="im_arr_sort",
+                 sorting_attribute=None):
+        """
+        Constructor of FrameSortingModule
+
+        Parameters
+        ----------
+        name_in : str
+            Unique name of the module instance.
+        image_in_tag : str
+            Tag of the database entry that is read as input.
+        image_out_tag : str
+            Tag of the database entry that is written as output. Should be different from
+            *image_in_tag*.
+        sorting_attribute : str
+            Non static attribute tag which the frames are sorted by.
+        """
+        super(FrameSortingModule, self).__init__(name_in)
+
+        self.m_image_in_port = self.add_input_port(image_in_tag)
+        self.m_image_out_port = self.add_output_port(image_out_tag)
+        self.m_sorting_attribute = sorting_attribute  
+    
+    def run(self):
+
+        # activate OutputPort
+        self.m_image_out_port.activate()
+        # delete old data
+        self.m_image_out_port.del_all_data()
+        self.m_image_out_port.del_all_attributes()
+        
+        # get the non static attribute which sorts the frames and attributes
+        ordering_attribute = self.m_image_in_port.get_attribute(self.m_sorting_attribute)
+        sorting_order = np.argsort(ordering_attribute)
+
+        # get and order the images
+        self.m_image_out_port.set_all(self.m_image_in_port.get_all()[sorting_order], keep_attributes=False)
+        # get and order the attributes
+        for attribute_key in self.m_image_in_port.get_all_non_static_attributes():
+            self.m_image_out_port.add_attribute(attribute_key, self.m_image_in_port.get_attribute(attribute_key)[sorting_order], static=False) 
+        for attribute_key in self.m_image_in_port.get_all_static_attributes():
+            self.m_image_out_port.add_attribute(attribute_key, self.m_image_in_port.get_attribute(attribute_key), static=True) 
+
+        sys.stdout.write("Running FrameSortingModule... [DONE]\n")
+        sys.stdout.flush()
+
+        self.m_image_in_port.close_port()
+
+'''
 class RemoveFramesBySimilarityModule(ProcessingModule):
     """
     Pipeline module which measures the similarity frames using different techniques.
@@ -733,7 +795,7 @@ class RemoveFramesBySimilarityModule(ProcessingModule):
             self.m_image_in_port, 
             self.m_removed_out_port,
             self.m_selected_out_port)       
-
+'''
 class RemoveLastFrameModule(ProcessingModule):
     """
     Pipeline module for removing every NDIT+1 frame from NACO data obtained in cube mode. This
