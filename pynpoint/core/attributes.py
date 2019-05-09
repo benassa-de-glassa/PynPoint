@@ -110,7 +110,7 @@ def get_attributes():
                             'type':'float'},
             'SEEING_FWHM_START':{'attribute':'non-static',
                             'config':'header',
-                            'value': 'SO TEL AMBI FWHM START',
+                            'value': 'ESO TEL AMBI FWHM START',
                             'type':'float'}}
 
     return attr
