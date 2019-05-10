@@ -476,55 +476,59 @@ class FrameSimilarityModule(ProcessingModule):
         self.m_image_in_port = self.add_input_port(image_tag)
         self.m_image_out_port = self.add_output_port(image_tag)
 
-        assert method in ['MSE', 'PCC', 'SSIM'], "The chosen method '{}' is not available. Please ensure that you have selected one of, 'MSE', 'PCC', 'SSIM'".format(str(method))
+        assert method in ['MSE', 'PCC', 'SSIM'], "The chosen method '{}' is not available. \
+            Please ensure that you have selected one of, 'MSE', 'PCC', 'SSIM'".format(str(method))
         self.m_method = method
 
         pixscale = self.m_image_in_port.get_attribute("PIXSCALE")
         print("pixscale", pixscale, "\n")
 
-        self.m_mask_radii = [int(mask_radius[0] / 0.0027),int(mask_radius[1] / 0.027)]#pixscale)
+        self.m_mask_radii = [int(mask_radius[0] / 0.0027), int(mask_radius[1] / 0.027)]#pixscale)
         self.m_fwhm = int(fwhm  / 0.027)# pixscale)
-    
+
     @staticmethod
     def _temporal_median(reference_index, images):
         """
-        Internal function. Calculates the temporal median for all frames, except the one with the reference_index
+        Internal function. Calculates the temporal median for all frames, except the one \
+            with the reference_index
         """
         M = np.concatenate((images[:reference_index], images[reference_index+1:]))
-        return np.median(M, axis = 0)
+        return np.median(M, axis=0)
 
     def _similarity(self, reference_index):
         """
         Internal function. Returns the MSE as defined by Ruane et al. 2019
         """
-        def cov (P, Q):
+        def cov(P, Q):
             """
             Internal function. Returns the covariance as defined by Ruane et al. 2019
             """
             return 1 / (self.m_N_pix - 1) * np.sum((P - np.nanmean(P)) * (Q - np.nanmean(Q)))
-        def std (P):
+        def std(P):
             """
             Internal function. Returns the standard deviation as defined by Ruane et al. 2019
             """
-            return np.sqrt(1 / (self.m_N_pix - 1) * np.sum(((P - np.nanmean(P)))**2 ))
+            return np.sqrt(1 / (self.m_N_pix - 1) * np.sum(((P - np.nanmean(P)))**2))
 
         mode = self.m_method
         X_i = self.m_images[reference_index]
-        M = self._temporal_median(reference_index, images = self.m_images)
-        if mode =="MSE":
+        M = self._temporal_median(reference_index, images=self.m_images)
+        if mode == "MSE":
             MSE = 1 / self.m_N_pix * np.sum((X_i - M) ** 2)
             del X_i, M
             return MSE
-        
+
         elif mode =="PCC":
             PCC = cov(X_i, M) / (std(X_i) * std(M))
             del X_i, M
             return PCC
-        
-        elif mode =="SSIM":
+
+        elif mode == "SSIM":
             from skimage.measure import compare_ssim as ssim
-            if int(self.m_fwhm) % 2 == 0: winsize = int(self.m_fwhm) + 1
-            else: winsize = int(self.m_fwhm)
+            if int(self.m_fwhm) % 2 == 0: 
+                winsize = int(self.m_fwhm) + 1
+            else: 
+                winsize = int(self.m_fwhm)
             return ssim(X_i, M, win_size=winsize)
             '''
             c1, c2, c3 = 1e-8, 1e-8, 1e-8
@@ -574,7 +578,8 @@ class FrameSimilarityModule(ProcessingModule):
 
     def run(self):
         """
-        Run method of the module. Compares individual frames to the others using different techniques. Selects those which are most similar.
+        Run method of the module. Compares individual frames to the others \
+            using different techniques. Selects those which are most similar.
 
         Returns
         -------
@@ -589,20 +594,20 @@ class FrameSimilarityModule(ProcessingModule):
         # overlay the same mask over all images
         print("creating mask")
         self.m_mask = create_mask(self.m_im_shape, self.m_mask_radii)
-        
+
         print("getting images... will take long")
         self.m_images = self.m_image_in_port.get_all()
-        
+
         # print("mask", *self.m_mask)
         print("mask shape: ", self.m_mask.shape)
         print("images shape: ", self.m_images.shape)
-        
-        
+
+
         print("applying mask (not for SSIM)")
-        if not self.m_method == "SSIM":
+        if self.m_method != "SSIM":
             self.m_images *= self.m_mask
             # self.m_images[self.m_images == 0] = np.nan
-        
+
         # count mask pixels for normalization
         self.m_N_pix = np.sum(self.m_mask)
         # compare images and store similarity
@@ -611,13 +616,14 @@ class FrameSimilarityModule(ProcessingModule):
         for i in range(nimages):
             similarity[i] = self._similarity(i)#, mode = self.m_method) #maybe use map?
             print("{} th similarity out of {} images calculated ".format(i, nimages), end='\r')
-        
-        self.m_image_out_port.add_attribute("SIMILARITY" + "_" + self.m_method, similarity, static=False)
+
+        self.m_image_out_port.add_attribute("SIMILARITY" + "_" + self.m_method, \
+            similarity, static=False)
         self.m_image_out_port.close_port()
         """
         print(similarity)
         import matplotlib
-        matplotlib.use('Agg') 
+        matplotlib.use('Agg')
         import matplotlib.pyplot as plt
         plt.figure()
         plt.hist(similarity)
@@ -628,7 +634,7 @@ class FrameSimilarityModule(ProcessingModule):
         plt.savefig('plot-similarity-pcc.png')
         plt.close()
         return similarity
-        """ 
+        """
 
 class FrameSortingModule(ProcessingModule):
     """
@@ -658,8 +664,8 @@ class FrameSortingModule(ProcessingModule):
 
         self.m_image_in_port = self.add_input_port(image_in_tag)
         self.m_image_out_port = self.add_output_port(image_out_tag)
-        self.m_sorting_attribute = sorting_attribute  
-    
+        self.m_sorting_attribute = sorting_attribute
+
     def run(self):
 
         # activate OutputPort
@@ -667,18 +673,26 @@ class FrameSortingModule(ProcessingModule):
         # delete old data
         self.m_image_out_port.del_all_data()
         self.m_image_out_port.del_all_attributes()
-        
+
         # get the non static attribute which sorts the frames and attributes
         ordering_attribute = self.m_image_in_port.get_attribute(self.m_sorting_attribute)
         sorting_order = np.argsort(ordering_attribute)
 
         # get and order the images
-        self.m_image_out_port.set_all(self.m_image_in_port.get_all()[sorting_order], keep_attributes=False)
+        self.m_image_out_port.set_all(self.m_image_in_port.get_all()[sorting_order], \
+            keep_attributes=False)
         # get and order the attributes
         for attribute_key in self.m_image_in_port.get_all_non_static_attributes():
-            self.m_image_out_port.add_attribute(attribute_key, self.m_image_in_port.get_attribute(attribute_key)[sorting_order], static=False) 
+            try:
+                self.m_image_out_port.add_attribute(attribute_key, \
+                    self.m_image_in_port.get_attribute(attribute_key)[sorting_order], static=False)
+            except IndexError:
+                sys.stdout.write("Attribute '{}' does not have the correct length, it will be obmitted.\n".format(attribute_key))
+                sys.stdout.flush()
+
         for attribute_key in self.m_image_in_port.get_all_static_attributes():
-            self.m_image_out_port.add_attribute(attribute_key, self.m_image_in_port.get_attribute(attribute_key), static=True) 
+            self.m_image_out_port.add_attribute(attribute_key, \
+                self.m_image_in_port.get_attribute(attribute_key), static=True)
 
         sys.stdout.write("Running FrameSortingModule... [DONE]\n")
         sys.stdout.flush()
