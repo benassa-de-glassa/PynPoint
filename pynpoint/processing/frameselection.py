@@ -476,7 +476,7 @@ class FrameSimilarityModule(ProcessingModule):
         self.m_image_in_port = self.add_input_port(image_tag)
         self.m_image_out_port = self.add_output_port(image_tag)
 
-        assert method in ['MSE', 'PCC', 'SSIM'], "The chosen method {} is not available. Please ensure that you have selected one of, 'MSE', 'PCC', 'SSIM'".format(str(method))
+        assert method in ['MSE', 'PCC', 'SSIM'], "The chosen method '{}' is not available. Please ensure that you have selected one of, 'MSE', 'PCC', 'SSIM'".format(str(method))
         self.m_method = method
 
         pixscale = self.m_image_in_port.get_attribute("PIXSCALE")
@@ -523,8 +523,8 @@ class FrameSimilarityModule(ProcessingModule):
         
         elif mode =="SSIM":
             from skimage.measure import compare_ssim as ssim
-            if int(self.m_fwhm) % 2 == 0: winsize = int(fwhm) + 1
-            else: winsize = int(fwhm)
+            if int(self.m_fwhm) % 2 == 0: winsize = int(self.m_fwhm) + 1
+            else: winsize = int(self.m_fwhm)
             return ssim(X_i, M, win_size=winsize)
             '''
             c1, c2, c3 = 1e-8, 1e-8, 1e-8
