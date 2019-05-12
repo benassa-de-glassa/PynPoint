@@ -14,7 +14,7 @@ import scipy as sp
 from six.moves import range
 
 from pynpoint.core.processing import ProcessingModule
-from pynpoint.util.image import crop_image, pixel_distance, create_mask, shift_image
+from pynpoint.util.image import crop_image, pixel_distance, create_mask
 from pynpoint.util.module import progress, memory_frames, locate_star
 from pynpoint.util.remove import write_selected_data, write_selected_attributes
 
@@ -444,372 +444,6 @@ class FrameSelectionModule(ProcessingModule):
         self.m_image_in_port.close_port()
 
 
-class FrameSimilarityModule(ProcessingModule):
-    """
-    Pipeline module which measures the similarity frames using different techniques.
-    """
-
-    def __init__(self,
-                 name_in="frame_comparison",
-                 image_tag="im_arr",
-                 method="MSE",
-                 mask_radius=(0., 5.),
-                 fwhm=.1):
-        """
-        Constructor of FrameSimilarityModule
-
-        Parameters
-        ----------
-        name_in : str
-            Unique name of the module instance.
-        image_tag : str
-            Tag of the database entry that is read as input.
-
-        Returns
-        -------
-        NoneType
-            None
-        """
-
-        super(FrameSimilarityModule, self).__init__(name_in)
-
-        self.m_image_in_port = self.add_input_port(image_tag)
-        self.m_image_out_port = self.add_output_port(image_tag)
-
-        assert method in ['MSE', 'PCC', 'SSIM'], "The chosen method '{}' is not available. \
-            Please ensure that you have selected one of, 'MSE', 'PCC', 'SSIM'".format(str(method))
-        self.m_method = method
-
-        pixscale = self.m_image_in_port.get_attribute("PIXSCALE")
-        print("pixscale", pixscale, "\n")
-
-        self.m_mask_radii = [int(mask_radius[0] / 0.0027), int(mask_radius[1] / 0.027)]#pixscale)
-        self.m_fwhm = int(fwhm  / 0.027)# pixscale)
-
-    @staticmethod
-    def _temporal_median(reference_index, images):
-        """
-        Internal function. Calculates the temporal median for all frames, except the one \
-            with the reference_index
-        """
-        M = np.concatenate((images[:reference_index], images[reference_index+1:]))
-        return np.median(M, axis=0)
-
-    def _similarity(self, reference_index):
-        """
-        Internal function. Returns the MSE as defined by Ruane et al. 2019
-        """
-        def cov(P, Q):
-            """
-            Internal function. Returns the covariance as defined by Ruane et al. 2019
-            """
-            return 1 / (self.m_N_pix - 1) * np.sum((P - np.nanmean(P)) * (Q - np.nanmean(Q)))
-        def std(P):
-            """
-            Internal function. Returns the standard deviation as defined by Ruane et al. 2019
-            """
-            return np.sqrt(1 / (self.m_N_pix - 1) * np.sum(((P - np.nanmean(P)))**2))
-
-        mode = self.m_method
-        X_i = self.m_images[reference_index]
-        M = self._temporal_median(reference_index, images=self.m_images)
-        if mode == "MSE":
-            MSE = 1 / self.m_N_pix * np.sum((X_i - M) ** 2)
-            del X_i, M
-            return MSE
-
-        elif mode =="PCC":
-            PCC = cov(X_i, M) / (std(X_i) * std(M))
-            del X_i, M
-            return PCC
-
-        elif mode == "SSIM":
-            from skimage.measure import compare_ssim as ssim
-            if int(self.m_fwhm) % 2 == 0: 
-                winsize = int(self.m_fwhm) + 1
-            else: 
-                winsize = int(self.m_fwhm)
-            return ssim(X_i, M, win_size=winsize)
-            '''
-            c1, c2, c3 = 1e-8, 1e-8, 1e-8
-
-            def L_i(reference_index, images):
-                X_mean = np.nanmean(images[reference_index])
-                M_mean = np.nanmean(self._temporal_median(reference_index, images = images))
-                L = (2 * X_mean * M_mean + c1) /\
-                    (X_mean ** 2 + M_mean ** 2 + c1)
-                return L
-            def C_i(reference_index, images):
-                X_i = images[reference_index]
-                M = self._temporal_median(reference_index, images = images)
-                C = (2 * std(X_i) * std(M) + c2) /\
-                    (std(X_i) ** 2 + std(M) ** 2 + c2)
-                return C
-            def S_i(reference_index, images):
-                X_i = images[reference_index]
-                M = self._temporal_median(reference_index, images = images)
-                S = (cov(X_i, M) + c3) /\
-                    (std(X_i) * std(M) + c3)
-                return S
-
-            # initialize SSIM value
-            SSIM = 0
-            # iterate through all masks
-            for i, pos in enumerate(np.argwhere(self.m_mask)):
-                # create a mask with image dimensions
-                temp_mask = create_mask(self.m_im_shape, (0, self.m_fwhm))
-                # shift the mask to have 'pos' as the center
-                temp_mask = shift_image(temp_mask, pos, "spline", mode='constant')
-                # apply the shifted mask to the images
-                temp_images = self.m_images[i] * temp_mask
-                # delete the mask, as it is no longer required
-                del temp_mask
-                temp_images[temp_images == 0] = np.nan
-
-                # calculate L * C * S for each mass position add to SSIM
-                SSIM += L_i(reference_index, temp_images) * \
-                    C_i(reference_index, temp_images) * \
-                    S_i(reference_index, temp_images)
-            del temp_images
-
-            # return average of SSIM
-            return SSIM / self.m_N_pix
-            '''
-
-    def run(self):
-        """
-        Run method of the module. Compares individual frames to the others \
-            using different techniques. Selects those which are most similar.
-
-        Returns
-        -------
-        NoneType
-            None
-        """
-
-        print("getting input shape")
-        nimages = self.m_image_in_port.get_shape()[0]
-        self.m_im_shape = self.m_image_in_port.get_shape()[1:]
-
-        # overlay the same mask over all images
-        print("creating mask")
-        self.m_mask = create_mask(self.m_im_shape, self.m_mask_radii)
-
-        print("getting images... will take long")
-        self.m_images = self.m_image_in_port.get_all()
-
-        # print("mask", *self.m_mask)
-        print("mask shape: ", self.m_mask.shape)
-        print("images shape: ", self.m_images.shape)
-
-
-        print("applying mask (not for SSIM)")
-        if self.m_method != "SSIM":
-            self.m_images *= self.m_mask
-            # self.m_images[self.m_images == 0] = np.nan
-
-        # count mask pixels for normalization
-        self.m_N_pix = np.sum(self.m_mask)
-        # compare images and store similarity
-        similarity = np.zeros(nimages)
-        print("calculating similarities: ... will take super long")
-        for i in range(nimages):
-            similarity[i] = self._similarity(i)#, mode = self.m_method) #maybe use map?
-            print("{} th similarity out of {} images calculated ".format(i, nimages), end='\r')
-
-        self.m_image_out_port.add_attribute("SIMILARITY" + "_" + self.m_method, \
-            similarity, static=False)
-        self.m_image_out_port.close_port()
-        """
-        print(similarity)
-        import matplotlib
-        matplotlib.use('Agg')
-        import matplotlib.pyplot as plt
-        plt.figure()
-        plt.hist(similarity)
-        plt.savefig('hist-pcc.png')
-        plt.close()
-        plt.figure()
-        plt.plot(similarity)
-        plt.savefig('plot-similarity-pcc.png')
-        plt.close()
-        return similarity
-        """
-
-class FrameSortingModule(ProcessingModule):
-    """
-    Pipeline module to sort frames in ascending order according to a given attribute.
-    """
-    def __init__(self,
-                 name_in="sort_frames",
-                 image_in_tag="im_arr",
-                 image_out_tag="im_arr_sort",
-                 sorting_attribute=None):
-        """
-        Constructor of FrameSortingModule
-
-        Parameters
-        ----------
-        name_in : str
-            Unique name of the module instance.
-        image_in_tag : str
-            Tag of the database entry that is read as input.
-        image_out_tag : str
-            Tag of the database entry that is written as output. Should be different from
-            *image_in_tag*.
-        sorting_attribute : str
-            Non static attribute tag which the frames are sorted by.
-        """
-        super(FrameSortingModule, self).__init__(name_in)
-
-        self.m_image_in_port = self.add_input_port(image_in_tag)
-        self.m_image_out_port = self.add_output_port(image_out_tag)
-        self.m_sorting_attribute = sorting_attribute
-
-    def run(self):
-
-        # activate OutputPort
-        self.m_image_out_port.activate()
-        # delete old data
-        self.m_image_out_port.del_all_data()
-        self.m_image_out_port.del_all_attributes()
-
-        # get the non static attribute which sorts the frames and attributes
-        ordering_attribute = self.m_image_in_port.get_attribute(self.m_sorting_attribute)
-        sorting_order = np.argsort(ordering_attribute)
-
-        # get and order the images
-        self.m_image_out_port.set_all(self.m_image_in_port.get_all()[sorting_order], \
-            keep_attributes=False)
-        # get and order the attributes
-        for attribute_key in self.m_image_in_port.get_all_non_static_attributes():
-            try:
-                self.m_image_out_port.add_attribute(attribute_key, \
-                    self.m_image_in_port.get_attribute(attribute_key)[sorting_order], static=False)
-            except IndexError:
-                sys.stdout.write("Attribute '{}' does not have the correct length, it will be obmitted.\n".format(attribute_key))
-                sys.stdout.flush()
-
-        for attribute_key in self.m_image_in_port.get_all_static_attributes():
-            self.m_image_out_port.add_attribute(attribute_key, \
-                self.m_image_in_port.get_attribute(attribute_key), static=True)
-
-        sys.stdout.write("Running FrameSortingModule... [DONE]\n")
-        sys.stdout.flush()
-
-        self.m_image_in_port.close_port()
-
-'''
-class RemoveFramesBySimilarityModule(ProcessingModule):
-    """
-    Pipeline module which measures the similarity frames using different techniques.
-    """
-
-    def __init__(self,
-                 name_in="frame_selection",
-                 image_in_tag="im_arr",
-                 selected_out_tag="im_arr_selected",
-                 removed_out_tag="im_arr_removed",
-                 index_out_tag="index_selected",
-                 method="MSE",
-                 frames=100):
-        """
-        Constructor of RemoveFramesBySimilarityModule
-
-        Parameters
-        ----------
-        name_in : str
-            Unique name of the module instance.
-        image_tag : str
-            Tag of the database entry that is read as input.
-
-        Returns
-        -------
-        NoneType
-            None
-        """
-
-        super(RemoveFramesBySimilarityModule, self).__init__(name_in)
-
-        self.m_image_in_port = self.add_input_port(image_in_tag)
-        self.m_selected_out_port = self.add_output_port(selected_out_tag)
-        self.m_removed_out_port = self.add_output_port(removed_out_tag)
-
-        assert method in ['MSE', 'PCC', 'SSIM'], "The chosen method {} is not available. Please ensure that you have selected one of, 'MSE', 'PCC', 'SSIM'".format(str(method))
-        self.m_method = method
-        self.m_frames = frames
-
-    def _initialize(self):
-        if self.m_image_in_port.tag == self.m_selected_out_port.tag or \
-                self.m_image_in_port.tag == self.m_removed_out_port.tag:
-            raise ValueError("Input and output ports should have a different tag.")
-
-        if self.m_selected_out_port is not None:
-            self.m_selected_out_port.del_all_data()
-            self.m_selected_out_port.del_all_attributes()
-            print("removed all old data")
-
-        if self.m_removed_out_port is not None:
-            self.m_removed_out_port.del_all_data()
-            self.m_removed_out_port.del_all_attributes()
-            print("removed all old data")
-
-    def run(self):
-        """
-        Run function of RemoveFramesBySimilarityModule
-        """
-        self._initialize()
-        images = self.m_image_in_port.get_all()
-        nimages = images.shape[0]
-        
-        similarity = self.m_image_in_port.get_attribute("SIMILARITY_{}".format(self.m_method))
-        index = self.m_image_in_port.get_attribute("INDEX")
-        # sort similarity in ascending order
-        sorting_order = np.argsort(similarity)
-        similarity = similarity[sorting_order]
-        index = index[sorting_order]
-
-        removed_index = index[:self.m_frames]
-        selected_index = index[self.m_frames:]
-
-        indices = removed_index
-        if np.size(indices) > 0:
-            memory = self._m_config_port.get_attribute("MEMORY")
-            frames = memory_frames(memory, nimages)
-
-            if memory == 0 or memory >= nimages:
-                memory = nimages
-
-            for i, _ in enumerate(frames[:-1]):
-                images = self.m_image_in_port[frames[i]:frames[i+1], ]
-
-                index_del = np.where(np.logical_and(indices >= frames[i], \
-                                                    indices < frames[i+1]))
-
-                write_selected_data(images,
-                                    indices[index_del]%memory,
-                                    self.m_removed_out_port,
-                                    self.m_selected_out_port)
-
-        else:
-            warnings.warn("No frames were removed.")
-
-
-        if self.m_selected_out_port is not None:
-            # Copy attributes before write_selected_attributes is used
-            self.m_selected_out_port.copy_attributes(self.m_image_in_port)
-
-        if self.m_removed_out_port is not None:
-            # Copy attributes before write_selected_attributes is used
-            self.m_removed_out_port.copy_attributes(self.m_image_in_port)
-
-        # write the selected and removed data to the respective output ports
-        # write_selected_data(images, selected_index, self.m_selected_out_port, self.m_removed_out_port)
-        write_selected_attributes(selected_index, 
-            self.m_image_in_port, 
-            self.m_removed_out_port,
-            self.m_selected_out_port)       
-'''
 class RemoveLastFrameModule(ProcessingModule):
     """
     Pipeline module for removing every NDIT+1 frame from NACO data obtained in cube mode. This
@@ -1114,3 +748,431 @@ class ImageStatisticsModule(ProcessingModule):
         self.m_stat_out_port.copy_attributes(self.m_image_in_port)
         self.m_stat_out_port.add_history("ImageStatisticsModule", history)
         self.m_stat_out_port.close_port()
+
+
+class FrameSimilarityModule(ProcessingModule):
+    """
+    Pipeline module which measures the similarity frames using different techniques.
+    """
+
+    def __init__(self,
+                 name_in="frame_comparison",
+                 image_tag="im_arr",
+                 method="MSE",
+                 mask_radius=(0., 5.),
+                 fwhm=.1):
+        """
+        Constructor of FrameSimilarityModule
+
+        Parameters
+        ----------
+        name_in : str
+            Unique name of the module instance.
+        image_tag : str
+            Tag of the database entry that is read as input.
+
+        Returns
+        -------
+        NoneType
+            None
+        """
+
+        super(FrameSimilarityModule, self).__init__(name_in)
+
+        self.m_image_in_port = self.add_input_port(image_tag)
+        self.m_image_out_port = self.add_output_port(image_tag)
+
+        assert method in ['MSE', 'PCC', 'SSIM', 'DSC'], "The chosen method '{}' is not available. \
+            Please ensure that you have selected one of, 'MSE', 'PCC', 'SSIM'".format(str(method))
+        self.m_method = method
+
+        pixscale = self.m_image_in_port.get_attribute("PIXSCALE")
+        print("pixscale", pixscale, "\n")
+
+        self.m_mask_radii = [int(mask_radius[0] / 0.0027), int(mask_radius[1] / 0.027)]#pixscale)
+        self.m_fwhm = int(fwhm  / 0.027)# pixscale)
+
+    @staticmethod
+    def _temporal_median(reference_index, images):
+        """
+        Internal function. Calculates the temporal median for all frames, except the one \
+            with the reference_index
+        """
+        M = np.concatenate((images[:reference_index], images[reference_index+1:]))
+        return np.median(M, axis=0)
+
+    def _similarity(self, reference_index):
+        """
+        Internal function. Returns the MSE as defined by Ruane et al. 2019
+        """
+        def cov(P, Q):
+            """
+            Internal function. Returns the covariance as defined by Ruane et al. 2019
+            """
+            return 1 / (self.m_N_pix - 1) * np.sum((P - np.nanmean(P)) * (Q - np.nanmean(Q)))
+        def std(P):
+            """
+            Internal function. Returns the standard deviation as defined by Ruane et al. 2019
+            """
+            return np.sqrt(1 / (self.m_N_pix - 1) * np.sum(((P - np.nanmean(P)))**2))
+
+        mode = self.m_method
+        X_i = self.m_images[reference_index]
+        M = self._temporal_median(reference_index, images=self.m_images)
+        if mode == "MSE":
+            MSE = 1 / self.m_N_pix * np.sum((X_i - M) ** 2)
+            del X_i, M
+            return MSE
+
+        elif mode =="PCC":
+            PCC = cov(X_i, M) / (std(X_i) * std(M))
+            del X_i, M
+            return PCC
+
+        elif mode == "SSIM":
+            from skimage.measure import compare_ssim as ssim
+            if int(self.m_fwhm) % 2 == 0: 
+                winsize = int(self.m_fwhm) + 1
+            else: 
+                winsize = int(self.m_fwhm)
+            return ssim(X_i, M, win_size=winsize)
+            '''
+            c1, c2, c3 = 1e-8, 1e-8, 1e-8
+
+            def L_i(reference_index, images):
+                X_mean = np.nanmean(images[reference_index])
+                M_mean = np.nanmean(self._temporal_median(reference_index, images = images))
+                L = (2 * X_mean * M_mean + c1) /\
+                    (X_mean ** 2 + M_mean ** 2 + c1)
+                return L
+            def C_i(reference_index, images):
+                X_i = images[reference_index]
+                M = self._temporal_median(reference_index, images = images)
+                C = (2 * std(X_i) * std(M) + c2) /\
+                    (std(X_i) ** 2 + std(M) ** 2 + c2)
+                return C
+            def S_i(reference_index, images):
+                X_i = images[reference_index]
+                M = self._temporal_median(reference_index, images = images)
+                S = (cov(X_i, M) + c3) /\
+                    (std(X_i) * std(M) + c3)
+                return S
+
+            # initialize SSIM value
+            SSIM = 0
+            # iterate through all masks
+            for i, pos in enumerate(np.argwhere(self.m_mask)):
+                # create a mask with image dimensions
+                temp_mask = create_mask(self.m_im_shape, (0, self.m_fwhm))
+                # shift the mask to have 'pos' as the center
+                temp_mask = shift_image(temp_mask, pos, "spline", mode='constant')
+                # apply the shifted mask to the images
+                temp_images = self.m_images[i] * temp_mask
+                # delete the mask, as it is no longer required
+                del temp_mask
+                temp_images[temp_images == 0] = np.nan
+
+                # calculate L * C * S for each mass position add to SSIM
+                SSIM += L_i(reference_index, temp_images) * \
+                    C_i(reference_index, temp_images) * \
+                    S_i(reference_index, temp_images)
+            del temp_images
+
+            # return average of SSIM
+            return SSIM / self.m_N_pix
+            '''
+        elif mode == "DSC":
+            # make the images to binaries
+            X_i -= np.mean(X_i)
+            X_i = X_i > 0
+            M = np.mean(M)
+            M = M > 0
+            return np.sum(2 * X_i * M / (np.sum(X_i) + np.sum(M)))
+
+
+    def run(self):
+        """
+        Run method of the module. Compares individual frames to the others \
+            using different techniques. Selects those which are most similar.
+
+        Returns
+        -------
+        NoneType
+            None
+        """
+
+        print("getting input shape")
+        nimages = self.m_image_in_port.get_shape()[0]
+        self.m_im_shape = self.m_image_in_port.get_shape()[1:]
+
+        # overlay the same mask over all images
+        print("creating mask")
+        self.m_mask = create_mask(self.m_im_shape, self.m_mask_radii)
+
+        print("getting images... will take long")
+        self.m_images = self.m_image_in_port.get_all()
+
+        # print("mask", *self.m_mask)
+        print("mask shape: ", self.m_mask.shape)
+        print("images shape: ", self.m_images.shape)
+
+
+        print("applying mask (not for SSIM)")
+        if self.m_method != "SSIM":
+            self.m_images *= self.m_mask
+            # self.m_images[self.m_images == 0] = np.nan
+
+        # count mask pixels for normalization
+        self.m_N_pix = np.sum(self.m_mask)
+        # compare images and store similarity
+        similarity = np.zeros(nimages)
+        print("calculating similarities: ... will take super long")
+        for i in range(nimages):
+            similarity[i] = self._similarity(i)#, mode = self.m_method) #maybe use map?
+            print("{} th similarity out of {} images calculated ".format(i, nimages), end='\r')
+
+        self.m_image_out_port.add_attribute("SIMILARITY" + "_" + self.m_method, \
+            similarity, static=False)
+        self.m_image_out_port.close_port()
+        """
+        print(similarity)
+        import matplotlib
+        matplotlib.use('Agg')
+        import matplotlib.pyplot as plt
+        plt.figure()
+        plt.hist(similarity)
+        plt.savefig('hist-pcc.png')
+        plt.close()
+        plt.figure()
+        plt.plot(similarity)
+        plt.savefig('plot-similarity-pcc.png')
+        plt.close()
+        return similarity
+        """
+
+class FrameSortingModule(ProcessingModule):
+    """
+    Pipeline module to sort frames in ascending order according to a given attribute.
+    """
+    def __init__(self,
+                 name_in="sort_frames",
+                 image_in_tag="im_arr",
+                 image_out_tag="im_arr_sort",
+                 sorting_attribute=None):
+        """
+        Constructor of FrameSortingModule
+
+        Parameters
+        ----------
+        name_in : str
+            Unique name of the module instance.
+        image_in_tag : str
+            Tag of the database entry that is read as input.
+        image_out_tag : str
+            Tag of the database entry that is written as output. Should be different from
+            *image_in_tag*.
+        sorting_attribute : str
+            Non static attribute tag which the frames are sorted by.
+        """
+        super(FrameSortingModule, self).__init__(name_in)
+
+        self.m_image_in_port = self.add_input_port(image_in_tag)
+        self.m_image_out_port = self.add_output_port(image_out_tag)
+        self.m_sorting_attribute = sorting_attribute
+
+    def run(self):
+
+        # activate OutputPort
+        self.m_image_out_port.activate()
+        # delete old data
+        self.m_image_out_port.del_all_data()
+        self.m_image_out_port.del_all_attributes()
+
+        # get the non static attribute which sorts the frames and attributes
+        ordering_attribute = self.m_image_in_port.get_attribute(self.m_sorting_attribute)
+        sorting_order = np.argsort(ordering_attribute)
+
+        # get and order the images
+        self.m_image_out_port.set_all(self.m_image_in_port.get_all()[sorting_order], \
+            keep_attributes=False)
+        # get and order the attributes
+        for attribute_key in self.m_image_in_port.get_all_non_static_attributes():
+            try:
+                self.m_image_out_port.add_attribute(attribute_key, \
+                    self.m_image_in_port.get_attribute(attribute_key)[sorting_order], static=False)
+            except IndexError:
+                sys.stdout.write("Attribute '{}' does not have the correct length, it will be obmitted.\n".format(attribute_key))
+                sys.stdout.flush()
+
+        for attribute_key in self.m_image_in_port.get_all_static_attributes():
+            self.m_image_out_port.add_attribute(attribute_key, \
+                self.m_image_in_port.get_attribute(attribute_key), static=True)
+
+        sys.stdout.write("Running FrameSortingModule... [DONE]\n")
+        sys.stdout.flush()
+
+        self.m_image_in_port.close_port()
+
+class AttributeExpansionModule(ProcessingModule):
+    """
+    TODO testing
+    Pipeline module which ensures each frame has a copy of all required non-static
+    attributes. If a non static attribute 'XYZ' is given for a cube, then all frames
+    in that cube will have that attribute an attribute named 'XYZ_all'
+    """
+
+    def __init__(self,
+                 name_in="attribute_expansion",
+                 data_in_tag="data_arr"):
+        """
+        TODO insert docstring here
+        """
+        super(AttributeExpansionModule, self).__init__(name_in)
+
+        self.m_image_in_port = self.add_input_port(data_in_tag)
+        self.m_image_out_port = self.add_output_port(data_in_tag)
+
+    def run(self):
+        """
+        TODO insert docstring here
+        """
+
+        # number of images
+        n_images = self.m_image_in_port.get_shape()[0]
+        # number of frames per cube
+        n_frames = self.m_image_in_port.get_attribute("NFRAMES")
+        # names of the attributes
+        attribute_keys = self.m_image_in_port.get_all_non_static_attributes()
+        # go through all attributes
+        for attribute_key in attribute_keys:
+            # "old" attribute
+            attribute = self.m_image_in_port.get_attribute(attribute_key)
+            # new attribute
+            new_attribute = []
+
+            # if the there isn't a attribute for each cube
+            if len(attribute) != n_images and np.sum(n_frames * len(attribute)) != n_images:
+                warnings.warn("Attribute {attribute} could not be expanded to the correct\
+                    lenght")
+            # if there is an attribute for each cube
+            elif np.sum(n_frames * len(attribute)) == n_images:
+                new_attribute.append([[attribute[i]] * frames for i, frames in enumerate(n_frames)])
+            # if there is an attribute for each frame
+            else:
+                sys.stdout.write("Attribute {attribute} did not need to be copied. It already has\
+                    {n_images} entries")
+            new_attribute = np.array(new_attribute).flatten()
+
+            self.m_image_out_port.add_attribute('{attribute_key}_all', new_attribute, static=False)
+
+'''
+class RemoveFramesBySimilarityModule(ProcessingModule):
+    """
+    Pipeline module which measures the similarity frames using different techniques.
+    """
+
+    def __init__(self,
+                 name_in="frame_selection",
+                 image_in_tag="im_arr",
+                 selected_out_tag="im_arr_selected",
+                 removed_out_tag="im_arr_removed",
+                 index_out_tag="index_selected",
+                 method="MSE",
+                 frames=100):
+        """
+        Constructor of RemoveFramesBySimilarityModule
+
+        Parameters
+        ----------
+        name_in : str
+            Unique name of the module instance.
+        image_tag : str
+            Tag of the database entry that is read as input.
+
+        Returns
+        -------
+        NoneType
+            None
+        """
+
+        super(RemoveFramesBySimilarityModule, self).__init__(name_in)
+
+        self.m_image_in_port = self.add_input_port(image_in_tag)
+        self.m_selected_out_port = self.add_output_port(selected_out_tag)
+        self.m_removed_out_port = self.add_output_port(removed_out_tag)
+
+        assert method in ['MSE', 'PCC', 'SSIM'], "The chosen method {} is not available. Please ensure that you have selected one of, 'MSE', 'PCC', 'SSIM'".format(str(method))
+        self.m_method = method
+        self.m_frames = frames
+
+    def _initialize(self):
+        if self.m_image_in_port.tag == self.m_selected_out_port.tag or \
+                self.m_image_in_port.tag == self.m_removed_out_port.tag:
+            raise ValueError("Input and output ports should have a different tag.")
+
+        if self.m_selected_out_port is not None:
+            self.m_selected_out_port.del_all_data()
+            self.m_selected_out_port.del_all_attributes()
+            print("removed all old data")
+
+        if self.m_removed_out_port is not None:
+            self.m_removed_out_port.del_all_data()
+            self.m_removed_out_port.del_all_attributes()
+            print("removed all old data")
+
+    def run(self):
+        """
+        Run function of RemoveFramesBySimilarityModule
+        """
+        self._initialize()
+        images = self.m_image_in_port.get_all()
+        nimages = images.shape[0]
+        
+        similarity = self.m_image_in_port.get_attribute("SIMILARITY_{}".format(self.m_method))
+        index = self.m_image_in_port.get_attribute("INDEX")
+        # sort similarity in ascending order
+        sorting_order = np.argsort(similarity)
+        similarity = similarity[sorting_order]
+        index = index[sorting_order]
+
+        removed_index = index[:self.m_frames]
+        selected_index = index[self.m_frames:]
+
+        indices = removed_index
+        if np.size(indices) > 0:
+            memory = self._m_config_port.get_attribute("MEMORY")
+            frames = memory_frames(memory, nimages)
+
+            if memory == 0 or memory >= nimages:
+                memory = nimages
+
+            for i, _ in enumerate(frames[:-1]):
+                images = self.m_image_in_port[frames[i]:frames[i+1], ]
+
+                index_del = np.where(np.logical_and(indices >= frames[i], \
+                                                    indices < frames[i+1]))
+
+                write_selected_data(images,
+                                    indices[index_del]%memory,
+                                    self.m_removed_out_port,
+                                    self.m_selected_out_port)
+
+        else:
+            warnings.warn("No frames were removed.")
+
+
+        if self.m_selected_out_port is not None:
+            # Copy attributes before write_selected_attributes is used
+            self.m_selected_out_port.copy_attributes(self.m_image_in_port)
+
+        if self.m_removed_out_port is not None:
+            # Copy attributes before write_selected_attributes is used
+            self.m_removed_out_port.copy_attributes(self.m_image_in_port)
+
+        # write the selected and removed data to the respective output ports
+        # write_selected_data(images, selected_index, self.m_selected_out_port, self.m_removed_out_port)
+        write_selected_attributes(selected_index, 
+            self.m_image_in_port, 
+            self.m_removed_out_port,
+            self.m_selected_out_port)       
+'''

@@ -1,8 +1,12 @@
+"""
+Module for statistical resampling
+"""
 import numpy as np
 
-def resampling_estimator(data, n, estimator, axis=0, method="jackknife"):
+def jackknife_estimator(data, n, estimator, axis=0):
     """
-    Grabs n samples out of the data and calculated the estimator on top
+    Grabs n samples out of the data and calculates a jackknife estimator on top along the 0th axis.
+    Source: SMAC Lecture ETHZ HS2019
 
     Parameters
     ----------
@@ -10,12 +14,10 @@ def resampling_estimator(data, n, estimator, axis=0, method="jackknife"):
     data : numpy.array
         data on which the estimator should be applied
     n : int
-        Size of the subsample on which the jackknife estimator is calculated.\
-            Must be smaller or equal than data.shape[axis]
+        Size of the subsample on which the *method* estimator is calculated.\
+        Must be smaller or equal than data.shape[axis]
     estimator : method
         Function which calculates the estimated value
-    axis : int
-
 
     Returns
     -------
@@ -26,18 +28,60 @@ def resampling_estimator(data, n, estimator, axis=0, method="jackknife"):
     """
 
     #choose n values at random from the underlying distribution
-    indices = np.random.choice(a=data.shape[axis], size=n, replace=False)
-    data = data.take(indices, axis=axis)
-    theta = estimator(data, axis=axis)
-    theta_i = np.zeros(n)
+    indices = np.random.choice(a=data.shape[0], size=n, replace=False)
+    data = data[indices]
+
+    theta = estimator(data, axis=0)
+    theta_i = np.zeros((n, *data.shape[1:]))
+
     for i in range(n):
         # remove ith entry for indices
         no_i_indices = list(indices)
         del no_i_indices[i]
-        theta_i[i] = np.sum(estimator(data.take(no_i_indices, axis=axis), axis=axis), axis=axis)
+        theta_i[i] = np.sum(estimator(data[no_i_indices], axis=0), axis=0)
+
     theta_i /= n-1
-    theta_dot = np.sum(theta_i, axis=axis)
+    theta_dot = np.sum(theta_i, axis=0)
 
     bias = (n-1) * (theta_dot - theta)
-    variance = (n-1) / n * np.sum([(theta_i[i] - theta_dot)**2 for i in range(n)], axis=axis)
+    variance = (n-1) / n * np.sum([(theta_i[i] - theta_dot)**2 for i in range(n)], axis=0)
+    return theta - bias, variance
+
+def bootstrap_estimator(data, n, bootsrap_samples, estimator):
+    """
+    Grabs n samples out of the data and calculates a bootstrap estimator on top along the 0th axis.
+    Source: SMAC Lecture ETHZ HS2019
+
+    Parameters
+    ----------
+
+    data : numpy.array
+        data on which the estimator should be applied
+    n : int
+        Size of the subsample on which the *method* estimator is calculated.\
+        Must be smaller or equal than data.shape[axis]
+    estimator : method
+        Function which calculates the estimated value
+
+    Returns
+    -------
+    est : numpy.array
+        Estimated numpy.array with one less dimension along the selected axis compared to data
+    variance : numpy.array
+        Variance of the jackknife estimator
+    """
+    #choose n values at random from the underlying distribution
+    indices = np.random.choice(a=data.shape[0], size=n, replace=False)
+    bootstrap_indices = np.random.choice(indices, size=(bootsrap_samples, n), replace=True)
+
+    theta_i = np.zeros((n, *data.shape[1:]))
+
+    for i, bootstrap_sample in enumerate(bootstrap_indices):
+        theta_i[i] = np.sum(estimator(data[bootstrap_sample], axis=0), axis=0)
+
+    theta_i /= bootsrap_samples
+    theta_dot = np.sum(theta_i, axis=0)
+
+    bias = theta_dot - theta
+    variance = 1 / n * np.sum([(theta_i[i] - theta_dot)**2 for i in range(n)], axis=0)
     return theta - bias, variance
