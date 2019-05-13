@@ -2,12 +2,12 @@
 Pipeline modules for locating, aligning, and centering of the star.
 """
 
-from __future__ import absolute_import
-from __future__ import print_function
-
 import sys
+import time
 import math
 import warnings
+
+from typing import Union, Tuple
 
 import numpy as np
 
@@ -16,7 +16,7 @@ from skimage.transform import rescale
 from scipy.ndimage.filters import gaussian_filter
 from scipy.optimize import curve_fit
 from astropy.modeling import models, fitting
-from six.moves import range
+from typeguard import typechecked
 
 from pynpoint.core.processing import ProcessingModule
 from pynpoint.util.module import memory_frames, progress, locate_star
@@ -38,8 +38,6 @@ class StarExtractionModule(ProcessingModule):
                  fwhm_star=0.2,
                  position=None):
         """
-        Constructor of StarExtractionModule.
-
         Parameters
         ----------
         name_in : str
@@ -53,7 +51,8 @@ class StarExtractionModule(ProcessingModule):
             List with image indices for which the image size is too large to be cropped around the
             brightest pixel. No data is written if set to None. This tag name can be provided to
             the *frames* parameter in
-            :class:`~pynpoint.processing.frameselection.RemoveFramesModule`.
+            :class:`~pynpoint.processing.frameselection.RemoveFramesModule`. This argument is
+            ignored if ``CPU`` is set to a value larger than 1.
         image_size : float
             Cropped image size (arcsec).
         fwhm_star : float
@@ -102,15 +101,25 @@ class StarExtractionModule(ProcessingModule):
             None
         """
 
+        cpu = self._m_config_port.get_attribute("CPU")
+
+        if cpu > 1:
+            self.m_index_out_port = None
+
         pixscale = self.m_image_in_port.get_attribute("PIXSCALE")
+        nimages = self.m_image_in_port.get_shape()[0]
 
         if self.m_position is not None:
             self.m_position = np.asarray(self.m_position)
-            nimages = self.m_image_in_port.get_shape()[0]
 
             if self.m_position.ndim == 2 and self.m_position.shape[0] != nimages:
                 raise ValueError("Either a single 'position' should be specified or an array "
                                  "equal in size to the number of images in 'image_in_tag'.")
+
+            if self.m_position.ndim == 2 and cpu > 1:
+                raise ValueError("Multiprocessing is only implemented for a single position. "
+                                 "Set CPU=1 in the configuration file or use a single "
+                                 "value for the 'position' argument.")
 
         self.m_image_size = int(math.ceil(self.m_image_size/pixscale))
         self.m_fwhm_star = int(math.ceil(self.m_fwhm_star/pixscale))
@@ -143,31 +152,36 @@ class StarExtractionModule(ProcessingModule):
                 im_crop = crop_image(image, starpos, im_size)
 
             except ValueError:
-                warnings.warn("PSF size is too large to crop the image around the brightest "
-                              "pixel (image index = "+str(self.m_count)+", pixel [x, y] = "
-                              +str([starpos[0]]+[starpos[1]])+"). Using the center of the "
-                              "image instead.")
+                if cpu == 1:
+                    warnings.warn("PSF size is too large to crop the image around the brightest "
+                                  "pixel (image index = "+str(self.m_count)+", pixel [x, y] = "
+                                  +str([starpos[0]]+[starpos[1]])+"). Using the center of the "
+                                  "image instead.")
 
-                index.append(self.m_count)
+                    index.append(self.m_count)
+
+                else:
+                    warnings.warn("PSF size is too large to crop the image around the brightest "
+                                  "pixel. Using the center of the image instead.")
 
                 starpos = center_pixel(image)
                 im_crop = crop_image(image, starpos, im_size)
 
-            star.append((starpos[1], starpos[0]))
-
-            self.m_count += 1
+            if cpu == 1:
+                star.append((starpos[1], starpos[0]))
+                self.m_count += 1
 
             return im_crop
 
         self.apply_function_to_images(_crop_around_star,
                                       self.m_image_in_port,
                                       self.m_image_out_port,
-                                      "Running StarExtractionModule...",
+                                      "Running StarExtractionModule",
                                       func_args=(self.m_position,
                                                  self.m_image_size,
                                                  self.m_fwhm_star))
 
-        history = "fwhm_star [pix] = "+str(self.m_fwhm_star)
+        history = f"fwhm_star [pix] = {self.m_fwhm_star}"
 
         if self.m_index_out_port is not None:
             self.m_index_out_port.set_all(np.transpose(np.asarray(index)))
@@ -176,7 +190,9 @@ class StarExtractionModule(ProcessingModule):
 
         self.m_image_out_port.copy_attributes(self.m_image_in_port)
         self.m_image_out_port.add_history("StarExtractionModule", history)
-        self.m_image_out_port.add_attribute("STAR_POSITION", np.asarray(star), static=False)
+
+        if cpu == 1:
+            self.m_image_out_port.add_attribute("STAR_POSITION", np.asarray(star), static=False)
 
         self.m_image_out_port.close_port()
 
@@ -197,8 +213,6 @@ class StarAlignmentModule(ProcessingModule):
                  num_references=10,
                  subframe=None):
         """
-        Constructor of StarAlignmentModule.
-
         Parameters
         ----------
         name_in : str
@@ -216,11 +230,12 @@ class StarAlignmentModule(ProcessingModule):
         accuracy : float
             Upsampling factor for the cross-correlation. Images will be registered to within
             1/accuracy of a pixel.
-        resize : float
-            Scaling factor for the up/down-sampling before the images are shifted.
+        resize : float, None
+            Scaling factor for the up/down-sampling before the images are shifted. Not used if set
+            to None.
         num_references : int
             Number of reference images for the cross-correlation.
-        subframe : float
+        subframe : float, None
             Size (arcsec) of the subframe around the image center that is used for the
             cross-correlation. The full image is used if set to None.
 
@@ -336,7 +351,7 @@ class StarAlignmentModule(ProcessingModule):
         self.apply_function_to_images(_align_image,
                                       self.m_image_in_port,
                                       self.m_image_out_port,
-                                      "Running StarAlignmentModule...")
+                                      "Running StarAlignmentModule")
 
         self.m_image_out_port.copy_attributes(self.m_image_in_port)
 
@@ -344,7 +359,7 @@ class StarAlignmentModule(ProcessingModule):
             pixscale = self.m_image_in_port.get_attribute("PIXSCALE")
             self.m_image_out_port.add_attribute("PIXSCALE", pixscale/self.m_resize)
 
-        history = "resize = "+str(self.m_resize)
+        history = f"resize = {self.m_resize}"
         self.m_image_out_port.add_history("StarAlignmentModule", history)
         self.m_image_out_port.close_port()
 
@@ -369,8 +384,6 @@ class StarCenteringModule(ProcessingModule):
                  filter_size=None,
                  **kwargs):
         """
-        Constructor of StarCenteringModule.
-
         Parameters
         ----------
         name_in : str
@@ -378,22 +391,21 @@ class StarCenteringModule(ProcessingModule):
         image_in_tag : str
             Tag of the database entry with images that are read as input.
         image_out_tag : str
-            Tag of the database entry with the centered images that are written as output. Should
-            be different from *image_in_tag*. Data is not written when set to None.
-        mask_out_tag : str
+            Tag of the database entry with the centered images that are written as output.
+        mask_out_tag : str, None
             Tag of the database entry with the masked images that are written as output. The
             unmasked part of the images is used for the fit. The effect of the smoothing that is
             applied by setting the *fwhm* parameter is also visible in the data of the
             *mask_out_tag*. Data is not written when set to None.
-        fit_out_tag : str
+        fit_out_tag : str, None
             Tag of the database entry with the best-fit results of the model fit and the 1-sigma
-            errors. Data is written in the following format: x offset (arcsec), x offset error
-            (arcsec), y offset (arcsec), y offset error (arcsec), FWHM major axis (arcsec), FWHM
-            major axis error (arcsec), FWHM minor axis (arcsec), FWHM minor axis error (arcsec),
-            amplitude (counts), amplitude error (counts), angle (deg), angle error (deg) measured
-            in counterclockwise direction with respect to the upward direction (i.e., East of
-            North), offset (counts), offset error (counts), power index (only for Moffat function),
-            and power index error (only for Moffat function).
+            errors. Data is written in the following format: x offset (pix), x offset error (pix)
+            y offset (pix), y offset error (pix), FWHM major axis (arcsec), FWHM major axis error
+            (arcsec), FWHM minor axis (arcsec), FWHM minor axis error (arcsec), amplitude (counts),
+            amplitude error (counts), angle (deg), angle error (deg) measured in counterclockwise
+            direction with respect to the upward direction (i.e., East of North), offset (counts),
+            offset error (counts), power index (only for Moffat function), and power index error
+            (only for Moffat function). Not used if set to None.
         method : str
             Fit and shift all the images individually ("full") or only fit the mean of the cube and
             shift all images to that location ("mean"). The "mean" method could be used after
@@ -410,7 +422,7 @@ class StarCenteringModule(ProcessingModule):
         model : str
             Type of 2D model used to fit the PSF ("gaussian" or "moffat"). Both models are
             elliptical in shape.
-        filter_size : float
+        filter_size : float, None
             Standard deviation (arcsec) of the Gaussian filter that is used to smooth the
             images before fitting the model. No filter is applied if set to None.
 
@@ -447,18 +459,17 @@ class StarCenteringModule(ProcessingModule):
         super(StarCenteringModule, self).__init__(name_in)
 
         self.m_image_in_port = self.add_input_port(image_in_tag)
-
-        if image_out_tag is None:
-            self.m_image_out_port = None
-        else:
-            self.m_image_out_port = self.add_output_port(image_out_tag)
+        self.m_image_out_port = self.add_output_port(image_out_tag)
 
         if mask_out_tag is None:
             self.m_mask_out_port = None
         else:
             self.m_mask_out_port = self.add_output_port(mask_out_tag)
 
-        self.m_fit_out_port = self.add_output_port(fit_out_tag)
+        if fit_out_tag is None:
+            self.m_fit_out_port = None
+        else:
+            self.m_fit_out_port = self.add_output_port(fit_out_tag)
 
         self.m_method = method
         self.m_interpolation = interpolation
@@ -483,20 +494,31 @@ class StarCenteringModule(ProcessingModule):
             None
         """
 
-        self.m_fit_out_port.del_all_data()
-        self.m_fit_out_port.del_all_attributes()
-
-        if self.m_image_out_port:
-            self.m_image_out_port.del_all_data()
-            self.m_image_out_port.del_all_attributes()
-
         if self.m_mask_out_port:
             self.m_mask_out_port.del_all_data()
             self.m_mask_out_port.del_all_attributes()
 
-        npix = self.m_image_in_port.get_shape()[-1]
+        if self.m_fit_out_port:
+            self.m_fit_out_port.del_all_data()
+            self.m_fit_out_port.del_all_attributes()
+
         memory = self._m_config_port.get_attribute("MEMORY")
+        cpu = self._m_config_port.get_attribute("CPU")
         pixscale = self.m_image_in_port.get_attribute("PIXSCALE")
+
+        npix = self.m_image_in_port.get_shape()[-1]
+
+        if cpu > 1:
+            if self.m_mask_out_port is not None:
+                warnings.warn("The mask_out_port can only be used if CPU=1. No data will be "
+                              "stored to this output port.")
+
+            if self.m_fit_out_port is not None:
+                warnings.warn("The fit_out_port can only be used if CPU=1. No data will be "
+                              "stored to this output port.")
+
+            self.m_mask_out_port = None
+            self.m_fit_out_port = None
 
         if self.m_radius:
             self.m_radius /= pixscale
@@ -656,7 +678,7 @@ class StarCenteringModule(ProcessingModule):
                     self.m_mask_out_port.append(mask, data_dim=3)
 
             if self.m_sign == "negative":
-                image = -image + np.abs(np.min(-image))
+                image = -1.*image + np.abs(np.min(-1.*image))
 
             if self.m_radius:
                 image = image[rr_ap < self.m_radius]
@@ -690,28 +712,30 @@ class StarCenteringModule(ProcessingModule):
 
                 self.m_count += 1
 
-            if self.m_model == "gaussian":
+            if self.m_fit_out_port:
 
-                res = np.asarray((popt[0]*pixscale, perr[0]*pixscale,
-                                  popt[1]*pixscale, perr[1]*pixscale,
-                                  popt[2]*pixscale, perr[2]*pixscale,
-                                  popt[3]*pixscale, perr[3]*pixscale,
-                                  popt[4], perr[4],
-                                  math.degrees(popt[5])%360., math.degrees(perr[5]),
-                                  popt[6], perr[6]))
+                if self.m_model == "gaussian":
 
-            elif self.m_model == "moffat":
+                    res = np.asarray((popt[0], perr[0],
+                                      popt[1], perr[1],
+                                      popt[2]*pixscale, perr[2]*pixscale,
+                                      popt[3]*pixscale, perr[3]*pixscale,
+                                      popt[4], perr[4],
+                                      math.degrees(popt[5])%360., math.degrees(perr[5]),
+                                      popt[6], perr[6]))
 
-                res = np.asarray((popt[0]*pixscale, perr[0]*pixscale,
-                                  popt[1]*pixscale, perr[1]*pixscale,
-                                  popt[2]*pixscale, perr[2]*pixscale,
-                                  popt[3]*pixscale, perr[3]*pixscale,
-                                  popt[4], perr[4],
-                                  math.degrees(popt[5])%360., math.degrees(perr[5]),
-                                  popt[6], perr[6],
-                                  popt[7], perr[7]))
+                elif self.m_model == "moffat":
 
-            self.m_fit_out_port.append(res, data_dim=2)
+                    res = np.asarray((popt[0], perr[0],
+                                      popt[1], perr[1],
+                                      popt[2]*pixscale, perr[2]*pixscale,
+                                      popt[3]*pixscale, perr[3]*pixscale,
+                                      popt[4], perr[4],
+                                      math.degrees(popt[5])%360., math.degrees(perr[5]),
+                                      popt[6], perr[6],
+                                      popt[7], perr[7]))
+
+                self.m_fit_out_port.append(res, data_dim=2)
 
             return popt
 
@@ -723,7 +747,6 @@ class StarCenteringModule(ProcessingModule):
 
             return shift_image(image, (-popt[1], -popt[0]), self.m_interpolation)
 
-        ndim = self.m_image_in_port.get_ndim()
         npix = self.m_image_in_port.get_shape()[-1]
 
         nimages = self.m_image_in_port.get_shape()[0]
@@ -742,26 +765,26 @@ class StarCenteringModule(ProcessingModule):
         self.apply_function_to_images(_centering,
                                       self.m_image_in_port,
                                       self.m_image_out_port,
-                                      "Running StarCenteringModule...",
+                                      "Running StarCenteringModule",
                                       func_args=(popt, ))
 
         if self.m_count > 0:
             print("Fit could not converge on %s image(s). [WARNING]" % self.m_count)
 
-        history = "method = "+self.m_method
+        history = f"method = {self.m_method}"
 
-        if self.m_image_out_port:
-            self.m_image_out_port.copy_attributes(self.m_image_in_port)
-            self.m_image_out_port.add_history("StarCenteringModule", history)
-
-        self.m_fit_out_port.copy_attributes(self.m_image_in_port)
-        self.m_fit_out_port.add_history("StarCenteringModule", history)
+        self.m_image_out_port.copy_attributes(self.m_image_in_port)
+        self.m_image_out_port.add_history("StarCenteringModule", history)
 
         if self.m_mask_out_port:
             self.m_mask_out_port.copy_attributes(self.m_image_in_port)
             self.m_mask_out_port.add_history("StarCenteringModule", history)
 
-        self.m_fit_out_port.close_port()
+        if self.m_fit_out_port:
+            self.m_fit_out_port.copy_attributes(self.m_image_in_port)
+            self.m_fit_out_port.add_history("StarCenteringModule", history)
+
+        self.m_image_out_port.close_port()
 
 
 class ShiftImagesModule(ProcessingModule):
@@ -769,21 +792,19 @@ class ShiftImagesModule(ProcessingModule):
     Pipeline module for shifting a stack of images.
     """
 
+    @typechecked
     def __init__(self,
-                 shift_xy,
-                 interpolation="spline",
-                 name_in="shift",
-                 image_in_tag="im_arr",
-                 image_out_tag="im_arr_shifted"):
+                 shift_xy: Union[Tuple[float, float], str],
+                 name_in: str = "shift",
+                 image_in_tag: str = "im_arr",
+                 image_out_tag: str = "im_arr_shifted",
+                 interpolation: str = "spline") -> None:
         """
-        Constructor of ShiftImagesModule.
-
         Parameters
         ----------
-        shift_xy : tuple(float, float)
-            The shift (pix) in x and y direction as (delta_x, delta_y).
-        interpolation : str
-            Type of interpolation that is used for shifting the images (spline, bilinear, or fft).
+        shift_xy : tuple(float, float), str
+            The shift (pix) in x and y direction as (delta_x, delta_y). Or, a database tag with
+            the fit results from the :class:`~pynpoint.processing.centering.StarCenteringModule`.
         name_in : str
             Unique name of the module instance.
         image_in_tag : str
@@ -791,6 +812,8 @@ class ShiftImagesModule(ProcessingModule):
         image_out_tag : str
             Tag of the database entry that is written as output. Should be different from
             *image_in_tag*.
+        interpolation : str
+            Type of interpolation that is used for shifting the images (spline, bilinear, or fft).
 
         Returns
         -------
@@ -803,10 +826,18 @@ class ShiftImagesModule(ProcessingModule):
         self.m_image_in_port = self.add_input_port(image_in_tag)
         self.m_image_out_port = self.add_output_port(image_out_tag)
 
-        self.m_shift = (shift_xy[1], shift_xy[0])
         self.m_interpolation = interpolation
 
-    def run(self):
+        if isinstance(shift_xy, str):
+            self.m_fit_in_port = self.add_input_port(shift_xy)
+            self.m_shift = None
+
+        else:
+            self.m_fit_in_port = None
+            self.m_shift = (shift_xy[1], shift_xy[0])
+
+    @typechecked
+    def run(self) -> None:
         """
         Run method of the module. Shifts an image with a fifth order spline, bilinear, or a
         Fourier shift interpolation.
@@ -817,6 +848,9 @@ class ShiftImagesModule(ProcessingModule):
             None
         """
 
+        if self.m_fit_in_port is not None:
+            self.m_shift = -1.*self.m_fit_in_port[:, [0, 2]]
+
         def _image_shift(image, shift, interpolation):
 
             return shift_image(image, shift, interpolation)
@@ -824,10 +858,15 @@ class ShiftImagesModule(ProcessingModule):
         self.apply_function_to_images(_image_shift,
                                       self.m_image_in_port,
                                       self.m_image_out_port,
-                                      "Running ShiftImagesModule...",
+                                      "Running ShiftImagesModule",
                                       func_args=(self.m_shift, self.m_interpolation))
 
-        history = "shift_xy = "+str(self.m_shift)
+        if self.m_fit_in_port is None:
+            history = f'shift_xy = {self.m_shift[0]:.2f}, {self.m_shift[1]:.2f}'
+        else:
+            mean_shift = np.mean(self.m_shift, axis=0)
+            history = f'shift_xy = {mean_shift[0]:.2f}, {mean_shift[1]:.2f}'
+
         self.m_image_out_port.copy_attributes(self.m_image_in_port)
         self.m_image_out_port.add_history("ShiftImagesModule", history)
         self.m_image_out_port.close_port()
@@ -853,8 +892,6 @@ class WaffleCenteringModule(ProcessingModule):
                  sigma=0.06,
                  dither=False):
         """
-        Constructor of WaffleCenteringModule.
-
         Parameters
         ----------
         name_in : str
@@ -912,7 +949,7 @@ class WaffleCenteringModule(ProcessingModule):
             None
         """
 
-        def _get_center(ndim, center):
+        def _get_center(center):
             center_frame = self.m_center_in_port[0, ]
 
             if center_shape[0] > 1:
@@ -928,17 +965,18 @@ class WaffleCenteringModule(ProcessingModule):
         self.m_image_out_port.del_all_data()
         self.m_image_out_port.del_all_attributes()
 
-        center_ndim = self.m_center_in_port.get_ndim()
         center_shape = self.m_center_in_port.get_shape()
         im_shape = self.m_image_in_port.get_shape()
 
-        center_frame, self.m_center = _get_center(center_ndim, self.m_center)
+        center_frame, self.m_center = _get_center(self.m_center)
 
         if im_shape[-2:] != center_shape[-2:]:
             raise ValueError("Science and center images should have the same shape.")
 
         pixscale = self.m_image_in_port.get_attribute("PIXSCALE")
+
         self.m_sigma /= pixscale
+
         if self.m_size is not None:
             self.m_size = int(math.ceil(self.m_size/pixscale))
 
@@ -976,8 +1014,10 @@ class WaffleCenteringModule(ProcessingModule):
                                           size=ref_image_size)
 
             # find maximum in tmp image
-            y_max, x_max = np.unravel_index(np.argmax(tmp_center_frame),
-                                            dims=tmp_center_frame.shape)
+            coords = np.unravel_index(indices=np.argmax(tmp_center_frame),
+                                      shape=tmp_center_frame.shape)
+
+            y_max, x_max = coords[0], coords[1]
 
             pixmax = tmp_center_frame[y_max, x_max]
             max_pos = np.array([x_max, y_max]).reshape(1, 2)
@@ -989,8 +1029,10 @@ class WaffleCenteringModule(ProcessingModule):
             dist = np.inf
 
             while dist > 2:
-                y_max_new, x_max_new = np.unravel_index(np.argmax(tmp_center_frame),
-                                                        dims=tmp_center_frame.shape)
+                coords = np.unravel_index(indices=np.argmax(tmp_center_frame),
+                                          shape=tmp_center_frame.shape)
+
+                y_max_new, x_max_new = coords[0], coords[1]
 
                 pixmax_new = tmp_center_frame[y_max_new, x_max_new]
 
@@ -1052,8 +1094,9 @@ class WaffleCenteringModule(ProcessingModule):
         nimages = self.m_image_in_port.get_shape()[0]
         npix = self.m_image_in_port.get_shape()[1]
 
+        start_time = time.time()
         for i in range(nimages):
-            progress(i, nimages, "Running WaffleCenteringModule...")
+            progress(i, nimages, "Running WaffleCenteringModule...", start_time)
 
             image = self.m_image_in_port[i, ]
 
@@ -1086,7 +1129,7 @@ class WaffleCenteringModule(ProcessingModule):
         sys.stdout.write("Center [x, y] = ["+str(x_center)+", "+str(y_center)+"]\n")
         sys.stdout.flush()
 
-        history = "position [x, y] = "+str([round(x_center, 4), round(y_center, 4)])
+        history = f"[x, y] = [{round(x_center, 2)}, {round(y_center, 2)}]"
         self.m_image_out_port.copy_attributes(self.m_image_in_port)
         self.m_image_out_port.add_history("WaffleCenteringModule", history)
         self.m_image_out_port.close_port()
