@@ -1043,27 +1043,34 @@ class AttributeExpansionModule(ProcessingModule):
         n_frames = self.m_image_in_port.get_attribute("NFRAMES")
         # names of the attributes
         attribute_keys = self.m_image_in_port.get_all_non_static_attributes()
+        print(attribute_keys)
         # go through all attributes
         for attribute_key in attribute_keys:
             # "old" attribute
             attribute = self.m_image_in_port.get_attribute(attribute_key)
+            print(attribute_key, len(attribute))
             # new attribute
             new_attribute = []
-
+            print(np.mean(n_frames * len(attribute)))
             # if the there isn't a attribute for each cube
-            if len(attribute) != n_images and np.sum(n_frames * len(attribute)) != n_images:
-                warnings.warn("Attribute {attribute} could not be expanded to the correct\
-                    lenght")
+            if len(attribute) != n_images and np.mean(n_frames * len(attribute)) != n_images:
+                warnings.warn("Attribute {} could not be expanded to the correct\
+                    lenght".format(attribute_key))
+                continue
             # if there is an attribute for each cube
-            elif np.sum(n_frames * len(attribute)) == n_images:
+            elif np.mean(n_frames * len(attribute)) == n_images:
                 new_attribute.append([[attribute[i]] * frames for i, frames in enumerate(n_frames)])
             # if there is an attribute for each frame
             else:
-                sys.stdout.write("Attribute {attribute} did not need to be copied. It already has\
-                    {n_images} entries")
+                sys.stdout.write("Attribute {} did not need to be copied. It already has\
+                    {} entries".format(attribute_key, n_images))
+                continue
+            # print(new_attribute)
             new_attribute = np.array(new_attribute).flatten()
-
-            self.m_image_out_port.add_attribute('{attribute_key}_all', new_attribute, static=False)
+            try:
+                self.m_image_out_port.add_attribute(str(attribute_key)+'_all', new_attribute, static=False)
+            except TypeError:
+                pass
 
 '''
 class RemoveFramesBySimilarityModule(ProcessingModule):
