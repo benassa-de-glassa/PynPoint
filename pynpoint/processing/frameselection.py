@@ -921,9 +921,11 @@ class FrameSimilarityModule(ProcessingModule):
         # compare images and store similarity
         similarity = np.zeros(nimages)
         print("calculating similarities: ... will take super long")
+        start_time = time.time()
         for i in range(nimages):
             similarity[i] = self._similarity(i)#, mode = self.m_method) #maybe use map?
-            print("{} th similarity out of {} images calculated ".format(i, nimages), end='\r')
+            progress(i, nimages, 'Running FrameSimilarityModule', start_time)
+            # print("{} th similarity out of {} images calculated ".format(i, nimages), end='\r')
 
         self.m_image_out_port.add_attribute("SIMILARITY" + "_" + self.m_method, \
             similarity, static=False)

@@ -44,6 +44,7 @@ class ContrastCurveModule(ProcessingModule):
                  extra_rot=0.,
                  residuals="median",
                  snr_inject=100.,
+                 image_selection_criteria=None,
                  **kwargs):
         """
         Parameters
@@ -149,6 +150,10 @@ class ContrastCurveModule(ProcessingModule):
             raise ValueError("The angular positions of the fake planets should lie between "
                              "0 deg and 360 deg.")
 
+        if image_selection_criteria:
+            self.m_selection_method = image_selection_criteria['method']
+            self.m_image_no = image_selection_criteria['image_no']
+
     def run(self):
         """
         Run method of the module. An artificial planet is injected (based on the noise level) at a
@@ -163,8 +168,17 @@ class ContrastCurveModule(ProcessingModule):
             None
         """
 
-        images = self.m_image_in_port.get_all()
+        if self.m_selection_method:
+            attr = self.m_image_in_port.get_attribute('SIMILARITY_' + self.m_selection_method)
+            indices = np.argsort(attr)[self.m_image_no:] # get the first self.m_image_no sorted indices
+            images = self.m_image_in_port.get_all()[indices]
+            parang = self.m_image_in_port.get_attribute("PARANG")[indices]
+        else:
+            images = self.m_image_in_port.get_all()
+            parang = self.m_image_in_port.get_attribute("PARANG")
         psf = self.m_psf_in_port.get_all()
+
+        print(images.shape)
 
         if psf.shape[0] != 1 and psf.shape[0] != images.shape[0]:
             raise ValueError('The number of frames in psf_in_tag {0} does not match with the '
@@ -173,7 +187,7 @@ class ContrastCurveModule(ProcessingModule):
                              'applying the ContrastCurveModule.'.format(psf.shape, images.shape))
 
         cpu = self._m_config_port.get_attribute("CPU")
-        parang = self.m_image_in_port.get_attribute("PARANG")
+        # parang = self.m_image_in_port.get_attribute("PARANG")
         pixscale = self.m_image_in_port.get_attribute("PIXSCALE")
 
         if self.m_cent_size is not None:

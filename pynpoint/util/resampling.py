@@ -47,7 +47,7 @@ def jackknife_estimator(data, n, estimator, axis=0):
     variance = (n-1) / n * np.sum([(theta_i[i] - theta_dot)**2 for i in range(n)], axis=0)
     return theta - bias, variance
 
-def bootstrap_estimator(data, n, bootsrap_samples, estimator):
+def bootstrap_estimator(data, n, bootstrap_samples, estimator):
     """
     Grabs n samples out of the data and calculates a bootstrap estimator on top along the 0th axis.
     Source: SMAC Lecture ETHZ HS2019
@@ -72,14 +72,16 @@ def bootstrap_estimator(data, n, bootsrap_samples, estimator):
     """
     #choose n values at random from the underlying distribution
     indices = np.random.choice(a=data.shape[0], size=n, replace=False)
-    bootstrap_indices = np.random.choice(indices, size=(bootsrap_samples, n), replace=True)
+    theta = estimator(data, axis=0)
+
+    bootstrap_indices = np.random.choice(indices, size=(bootstrap_samples, n), replace=True)
 
     theta_i = np.zeros((n, *data.shape[1:]))
 
     for i, bootstrap_sample in enumerate(bootstrap_indices):
         theta_i[i] = np.sum(estimator(data[bootstrap_sample], axis=0), axis=0)
 
-    theta_i /= bootsrap_samples
+    theta_i /= bootstrap_samples
     theta_dot = np.sum(theta_i, axis=0)
 
     bias = theta_dot - theta
