@@ -137,7 +137,7 @@ class ContrastCurveModule(ProcessingModule):
         self.m_psf_scaling = psf_scaling
         self.m_threshold = threshold
         self.m_aperture = aperture
-        self.m_pca_number = pca_number
+        self.m_pca_number = int(pca_number)
         self.m_cent_size = cent_size
         self.m_edge_size = edge_size
         self.m_extra_rot = extra_rot
@@ -152,7 +152,7 @@ class ContrastCurveModule(ProcessingModule):
 
         if image_selection_criteria:
             self.m_selection_method = image_selection_criteria['method']
-            self.m_image_no = image_selection_criteria['image_no']
+            self.m_image_no = int(image_selection_criteria['image_no'])
 
     def run(self):
         """
@@ -168,9 +168,11 @@ class ContrastCurveModule(ProcessingModule):
             None
         """
 
-        if hasattr(self, m_selection_method):
+        if hasattr(self, 'm_selection_method'):
             attr = self.m_image_in_port.get_attribute('SIMILARITY_' + self.m_selection_method)
-            indices = np.argsort(attr)[self.m_image_no:] # get the first self.m_image_no sorted indices
+            print(self.m_image_no)
+            indices = np.argsort(attr)[::-1][:self.m_image_no] # get the first self.m_image_no sorted indices
+            print(indices)
             images = self.m_image_in_port.get_all()[indices]
             parang = self.m_image_in_port.get_attribute("PARANG")[indices]
         else:
