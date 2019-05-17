@@ -15,6 +15,8 @@ from pynpoint.util.image import crop_image, pixel_distance, create_mask
 from pynpoint.util.module import progress, memory_frames, locate_star
 from pynpoint.util.remove import write_selected_data, write_selected_attributes
 
+from skimage.measure import compare_ssim as ssim
+
 
 class RemoveFramesModule(ProcessingModule):
     """
@@ -780,7 +782,7 @@ class FrameSimilarityModule(ProcessingModule):
             Please ensure that you have selected one of, 'MSE', 'PCC', 'SSIM'".format(str(method))
         self.m_method = method
 
-        pixscale = self.m_image_in_port.get_attribute("PIXSCALE")
+        pixscale = self.m_image_in_port.get_attribute("PIXSCALE", static=True)
         print("pixscale", pixscale, "\n")
 
         self.m_mask_radii = [int(mask_radius[0] / 0.0027), int(mask_radius[1] / 0.027)]#pixscale)
@@ -824,57 +826,12 @@ class FrameSimilarityModule(ProcessingModule):
             return PCC
 
         elif mode == "SSIM":
-            from skimage.measure import compare_ssim as ssim
             if int(self.m_fwhm) % 2 == 0: 
                 winsize = int(self.m_fwhm) + 1
             else: 
                 winsize = int(self.m_fwhm)
             return ssim(X_i, M, win_size=winsize)
-            '''
-            c1, c2, c3 = 1e-8, 1e-8, 1e-8
 
-            def L_i(reference_index, images):
-                X_mean = np.nanmean(images[reference_index])
-                M_mean = np.nanmean(self._temporal_median(reference_index, images = images))
-                L = (2 * X_mean * M_mean + c1) /\
-                    (X_mean ** 2 + M_mean ** 2 + c1)
-                return L
-            def C_i(reference_index, images):
-                X_i = images[reference_index]
-                M = self._temporal_median(reference_index, images = images)
-                C = (2 * std(X_i) * std(M) + c2) /\
-                    (std(X_i) ** 2 + std(M) ** 2 + c2)
-                return C
-            def S_i(reference_index, images):
-                X_i = images[reference_index]
-                M = self._temporal_median(reference_index, images = images)
-                S = (cov(X_i, M) + c3) /\
-                    (std(X_i) * std(M) + c3)
-                return S
-
-            # initialize SSIM value
-            SSIM = 0
-            # iterate through all masks
-            for i, pos in enumerate(np.argwhere(self.m_mask)):
-                # create a mask with image dimensions
-                temp_mask = create_mask(self.m_im_shape, (0, self.m_fwhm))
-                # shift the mask to have 'pos' as the center
-                temp_mask = shift_image(temp_mask, pos, "spline", mode='constant')
-                # apply the shifted mask to the images
-                temp_images = self.m_images[i] * temp_mask
-                # delete the mask, as it is no longer required
-                del temp_mask
-                temp_images[temp_images == 0] = np.nan
-
-                # calculate L * C * S for each mass position add to SSIM
-                SSIM += L_i(reference_index, temp_images) * \
-                    C_i(reference_index, temp_images) * \
-                    S_i(reference_index, temp_images)
-            del temp_images
-
-            # return average of SSIM
-            return SSIM / self.m_N_pix
-            '''
         elif mode == "DSC":
             # make the images to binaries
             X_i -= np.mean(X_i)
