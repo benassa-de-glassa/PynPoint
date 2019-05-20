@@ -8,7 +8,7 @@ import math
 import warnings
 
 import numpy as np
-import scipy as sp
+import multiprocessing as mp
 
 from pynpoint.core.processing import ProcessingModule
 from pynpoint.util.image import crop_image, pixel_distance, create_mask
@@ -755,8 +755,9 @@ class FrameSimilarityModule(ProcessingModule):
                  name_in="frame_comparison",
                  image_tag="im_arr",
                  method="MSE",
-                 mask_radius=(0., 5.),
-                 fwhm=.1):
+                 mask_radius=[0., 5.],
+                 fwhm=.1,
+                 temporal_median='slow'):
         """
         Constructor of FrameSimilarityModule
 
@@ -778,26 +779,21 @@ class FrameSimilarityModule(ProcessingModule):
         self.m_image_in_port = self.add_input_port(image_tag)
         self.m_image_out_port = self.add_output_port(image_tag)
 
-        assert method in ['MSE', 'PCC', 'SSIM', 'DSC'], "The chosen method '{}' is not available. \
-            Please ensure that you have selected one of, 'MSE', 'PCC', 'SSIM'".format(str(method))
+        assert method in ['MSE', 'PCC', 'SSIM', 'DSC'], "The chosen method '{}' is not"\
+            " available. Please ensure that you have selected one of 'MSE', 'PCC', 'SSIM'"\
+            ", 'DSC'".format(str(method))
         self.m_method = method
 
-        pixscale = self.m_image_in_port.get_attribute("PIXSCALE", static=True)
-        print("pixscale", pixscale, "\n")
+        assert temporal_median in ['slow', 'fast'], "The chosen temporal_median '{}' is"\
+            " not available. Please ensure that you have selected one of 'slow', 'fast'"\
+            .format(str(temporal_median))
+        self.m_temporal_median = temporal_median
 
-        self.m_mask_radii = [int(mask_radius[0] / 0.0027), int(mask_radius[1] / 0.027)]#pixscale)
-        self.m_fwhm = int(fwhm  / 0.027)# pixscale)
+        self.m_mask_radii = mask_radius
+        self.m_fwhm = fwhm
 
     @staticmethod
-    def _temporal_median(reference_index, images):
-        """
-        Internal function. Calculates the temporal median for all frames, except the one \
-            with the reference_index
-        """
-        M = np.concatenate((images[:reference_index], images[reference_index+1:]))
-        return np.median(M, axis=0)
-
-    def _similarity(self, reference_index):
+    def _similarity(images, reference_index, N_pix, mode, fwhm, temporal_median=False):
         """
         Internal function. Returns the MSE as defined by Ruane et al. 2019
         """
@@ -805,40 +801,48 @@ class FrameSimilarityModule(ProcessingModule):
             """
             Internal function. Returns the covariance as defined by Ruane et al. 2019
             """
-            return 1 / (self.m_N_pix - 1) * np.sum((P - np.nanmean(P)) * (Q - np.nanmean(Q)))
+            return 1 / (N_pix - 1) * np.sum((P - np.nanmean(P)) * (Q - np.nanmean(Q)))
         def std(P):
             """
             Internal function. Returns the standard deviation as defined by Ruane et al. 2019
             """
-            return np.sqrt(1 / (self.m_N_pix - 1) * np.sum(((P - np.nanmean(P)))**2))
+            return np.sqrt(1 / (N_pix - 1) * np.sum(((P - np.nanmean(P)))**2))
 
-        mode = self.m_method
-        X_i = self.m_images[reference_index]
-        M = self._temporal_median(reference_index, images=self.m_images)
+        def _temporal_median(reference_index, images):
+            """
+            Internal function. Calculates the temporal median for all frames, except the one \
+                with the reference_index
+            """
+            M = np.concatenate((images[:reference_index], images[reference_index+1:]))
+            return np.median(M, axis=0)
+
+        X_i = images[reference_index]
+        if not temporal_median:
+            M = _temporal_median(reference_index, images=images)
         if mode == "MSE":
-            MSE = 1 / self.m_N_pix * np.sum((X_i - M) ** 2)
+            MSE = 1 / N_pix * np.sum((X_i - M) ** 2)
             del X_i, M
-            return MSE
+            return reference_index, MSE
 
-        elif mode =="PCC":
+        elif mode == "PCC":
             PCC = cov(X_i, M) / (std(X_i) * std(M))
             del X_i, M
-            return PCC
+            return reference_index, PCC
 
         elif mode == "SSIM":
-            if int(self.m_fwhm) % 2 == 0: 
-                winsize = int(self.m_fwhm) + 1
-            else: 
-                winsize = int(self.m_fwhm)
-            return ssim(X_i, M, win_size=winsize)
+            if int(fwhm) % 2 == 0:
+                winsize = int(fwhm) + 1
+            else:
+                winsize = int(fwhm)
+            return reference_index, ssim(X_i, M, win_size=winsize)
 
         elif mode == "DSC":
             # make the images to binaries
-            X_i -= np.mean(X_i)
+            X_i -= np.median(X_i)
             X_i = X_i > 0
             M = np.mean(M)
             M = M > 0
-            return np.sum(2 * X_i * M / (np.sum(X_i) + np.sum(M)))
+            return reference_index, np.sum(2 * X_i * M / (np.sum(X_i) + np.sum(M)))
 
 
     def run(self):
@@ -852,56 +856,71 @@ class FrameSimilarityModule(ProcessingModule):
             None
         """
 
-        print("getting input shape")
+        # get image number and image shapes
         nimages = self.m_image_in_port.get_shape()[0]
-        self.m_im_shape = self.m_image_in_port.get_shape()[1:]
+        im_shape = self.m_image_in_port.get_shape()[1:]
+
+        # get pixscale
+        pixscale = self.m_image_in_port.get_attribute("PIXSCALE")
+
+        # convert arcsecs to pixels
+        self.m_mask_radii = np.floor(np.array(self.m_mask_radii) / pixscale)
+        self.m_fwhm = int(self.m_fwhm / pixscale)
 
         # overlay the same mask over all images
-        print("creating mask")
-        self.m_mask = create_mask(self.m_im_shape, self.m_mask_radii)
+        mask = create_mask(im_shape, self.m_mask_radii)
+        images = self.m_image_in_port.get_all()
 
-        print("getting images... will take long")
-        self.m_images = self.m_image_in_port.get_all()
+        if self.m_temporal_median == 'fast':
+            temporal_median = np.median(images, axis=0)
+        else:
+            temporal_median = False
 
-        # print("mask", *self.m_mask)
-        print("mask shape: ", self.m_mask.shape)
-        print("images shape: ", self.m_images.shape)
-
-
-        print("applying mask (not for SSIM)")
         if self.m_method != "SSIM":
-            self.m_images *= self.m_mask
-            # self.m_images[self.m_images == 0] = np.nan
+            images *= mask
 
         # count mask pixels for normalization
-        self.m_N_pix = np.sum(self.m_mask)
+        N_pix = int(np.sum(mask))
         # compare images and store similarity
         similarity = np.zeros(nimages)
-        print("calculating similarities: ... will take super long")
+
+        cpu = self._m_config_port.get_attribute("CPU")
+
+        pool = mp.Pool(cpu)
+        async_results = []
+
         start_time = time.time()
         for i in range(nimages):
-            similarity[i] = self._similarity(i)#, mode = self.m_method) #maybe use map?
-            progress(i, nimages, 'Running FrameSimilarityModule', start_time)
-            # print("{} th similarity out of {} images calculated ".format(i, nimages), end='\r')
+            async_results.append(pool.apply_async(FrameSimilarityModule._similarity,
+                                                  args=(images,
+                                                        i,
+                                                        N_pix,
+                                                        self.m_method,
+                                                        self.m_fwhm,
+                                                        temporal_median)))
+
+        pool.close()
+
+        # wait for all processes to finish
+        while mp.active_children():
+            # number of finished processes
+            nfinished = sum([i.ready() for i in async_results])
+
+            progress(nfinished/len(nimages), 1, 'Running FrameSimilarityModule', start_time)
+
+            # check if new processes have finished every 5 seconds
+            time.sleep(5)
+
+        # get the results for every async_result object
+        for async_result in async_results:
+            reference, result = async_result.get()
+            similarity[reference] = result
+
+        pool.terminate()
 
         self.m_image_out_port.add_attribute("SIMILARITY" + "_" + self.m_method, \
             similarity, static=False)
         self.m_image_out_port.close_port()
-        """
-        print(similarity)
-        import matplotlib
-        matplotlib.use('Agg')
-        import matplotlib.pyplot as plt
-        plt.figure()
-        plt.hist(similarity)
-        plt.savefig('hist-pcc.png')
-        plt.close()
-        plt.figure()
-        plt.plot(similarity)
-        plt.savefig('plot-similarity-pcc.png')
-        plt.close()
-        return similarity
-        """
 
 class FrameSortingModule(ProcessingModule):
     """
@@ -954,7 +973,8 @@ class FrameSortingModule(ProcessingModule):
                 self.m_image_out_port.add_attribute(attribute_key, \
                     self.m_image_in_port.get_attribute(attribute_key)[sorting_order], static=False)
             except IndexError:
-                sys.stdout.write("Attribute '{}' does not have the correct length, it will be obmitted.\n".format(attribute_key))
+                sys.stdout.write("Attribute '{}' does not have the correct length,"\
+                    " it will be obmitted.\n".format(attribute_key))
                 sys.stdout.flush()
 
         for attribute_key in self.m_image_in_port.get_all_static_attributes():
@@ -1021,7 +1041,8 @@ class AttributeExpansionModule(ProcessingModule):
             # print(new_attribute)
             new_attribute = np.array(new_attribute).flatten()
             try:
-                self.m_image_out_port.add_attribute(str(attribute_key)+'_all', new_attribute, static=False)
+                self.m_image_out_port.add_attribute(str(attribute_key)+'_all',\
+                    new_attribute, static=False)
             except TypeError:
                 pass
 
