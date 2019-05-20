@@ -170,9 +170,7 @@ class ContrastCurveModule(ProcessingModule):
 
         if hasattr(self, 'm_selection_method'):
             attr = self.m_image_in_port.get_attribute('SIMILARITY_' + self.m_selection_method)
-            print(self.m_image_no)
             indices = np.argsort(attr)[::-1][:self.m_image_no] # get the first self.m_image_no sorted indices
-            print(indices)
             images = self.m_image_in_port.get_all()[indices]
             parang = self.m_image_in_port.get_attribute("PARANG")[indices]
         else:

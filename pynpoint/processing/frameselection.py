@@ -15,7 +15,8 @@ from pynpoint.util.image import crop_image, pixel_distance, create_mask
 from pynpoint.util.module import progress, memory_frames, locate_star
 from pynpoint.util.remove import write_selected_data, write_selected_attributes
 
-from skimage.measure import compare_ssim as ssim
+from skimage.measure import compare_ssim, compare_nrmse
+
 
 
 class RemoveFramesModule(ProcessingModule):
@@ -829,9 +830,7 @@ class FrameSimilarityModule(ProcessingModule):
         if not temporal_median:
             M = _temporal_median(reference_index, images=images)
         if mode == "MSE":
-            MSE = 1 / N_pix * np.sum((X_i - M) ** 2)
-            del X_i, M
-            return reference_index, MSE
+            return reference_index, compare_nrmse(X_i, M)
 
         elif mode == "PCC":
             PCC = cov(X_i, M) / (std(X_i) * std(M))
@@ -843,7 +842,7 @@ class FrameSimilarityModule(ProcessingModule):
                 winsize = int(fwhm) + 1
             else:
                 winsize = int(fwhm)
-            return reference_index, ssim(X_i, M, win_size=winsize)
+            return reference_index, compare_ssim(X_i, M, win_size=winsize)
 
         elif mode == "DSC":
             # make the images to binaries
