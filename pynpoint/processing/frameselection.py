@@ -767,6 +767,15 @@ class FrameSimilarityModule(ProcessingModule):
             Unique name of the module instance.
         image_tag : str
             Tag of the database entry that is read as input.
+        method : str
+            Name of the similarity measure to be calculated
+        mask_radius : list
+            mask radii to be applied to the images, inner and outer. 
+        fwhm : float
+            FWHM
+        temporal_median : str
+            option to calculate the temporal median every time('slow', more exact) or once
+            for the entire set('fast', less exact)
 
         Returns
         -------
@@ -906,15 +915,15 @@ class FrameSimilarityModule(ProcessingModule):
             # number of finished processes
             nfinished = sum([i.ready() for i in async_results])
 
-            progress(nfinished/len(nimages), 1, 'Running FrameSimilarityModule', start_time)
+            progress(nfinished, nimages, 'Running FrameSimilarityModule', start_time)
 
             # check if new processes have finished every 5 seconds
             time.sleep(5)
 
         # get the results for every async_result object
         for async_result in async_results:
-            reference, result = async_result.get()
-            similarity[reference] = result
+            reference, similarity = async_result.get()
+            similarity[reference] = similarity
 
         pool.terminate()
 
