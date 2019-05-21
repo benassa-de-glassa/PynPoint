@@ -6,7 +6,7 @@ import numpy as np
 def jackknife_estimator(data, n, estimator, axis=0):
     """
     Grabs n samples out of the data and calculates a jackknife estimator on top along the 0th axis.
-    Source: SMAC Lecture ETHZ HS2019
+    Source: Statistical Methods in Astrophysics and Cosmology Lecture ETHZ HS2019
 
     Parameters
     ----------
@@ -50,7 +50,7 @@ def jackknife_estimator(data, n, estimator, axis=0):
 def bootstrap_estimator(data, n, bootstrap_samples, estimator):
     """
     Grabs n samples out of the data and calculates a bootstrap estimator on top along the 0th axis.
-    Source: SMAC Lecture ETHZ HS2019
+    Source: Statistical Methods in Astrophysics and Cosmology Lecture ETHZ HS2019
 
     Parameters
     ----------
