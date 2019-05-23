@@ -878,6 +878,7 @@ class FrameSimilarityModule(ProcessingModule):
         # overlay the same mask over all images
         mask = create_mask(im_shape, self.m_mask_radii)
         images = self.m_image_in_port.get_all()
+        self.m_image_out_port.close_port()
 
         if self.m_temporal_median == 'fast':
             temporal_median = np.median(images, axis=0)
@@ -894,6 +895,7 @@ class FrameSimilarityModule(ProcessingModule):
 
         cpu = self._m_config_port.get_attribute("CPU")
 
+        print("cpu\t", cpu)
         pool = mp.Pool(cpu)
         async_results = []
 
@@ -925,7 +927,8 @@ class FrameSimilarityModule(ProcessingModule):
             similarity[reference] = similarity
 
         pool.terminate()
-
+        
+        self.m_image_out_port.open_port()
         self.m_image_out_port.add_attribute("SIMILARITY" + "_" + self.m_method, \
             similarity, static=False)
         self.m_image_out_port.close_port()
