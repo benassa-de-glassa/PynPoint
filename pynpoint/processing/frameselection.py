@@ -762,6 +762,8 @@ class FrameSimilarityModule(ProcessingModule):
         """
         Constructor of FrameSimilarityModule
 
+        source: https://iopscience.iop.org/article/10.3847/1538-3881/aafee2/pdf
+
         Parameters
         ----------
         name_in : str
@@ -770,13 +772,14 @@ class FrameSimilarityModule(ProcessingModule):
             Tag of the database entry that is read as input.
         method : str
             Name of the similarity measure to be calculated
-        mask_radius : list
-            mask radii to be applied to the images, inner and outer. 
+        mask_radius : list(float, float)
+            inner and outer mask radii in arcsec to be applied to the images.
         fwhm : float
-            FWHM
+            The full width at half maximum. It is used by the sliding windows used in the SSIM
+            similarity calculation to find structures in the relevant scale.
         temporal_median : str
-            option to calculate the temporal median every time('slow', more exact) or once
-            for the entire set('fast', less exact)
+            option to calculate the temporal median every time('slow', like in source paper)
+            or once for the entire set('fast', not like the source paper)
 
         Returns
         -------
@@ -789,9 +792,9 @@ class FrameSimilarityModule(ProcessingModule):
         self.m_image_in_port = self.add_input_port(image_tag)
         self.m_image_out_port = self.add_output_port(image_tag)
 
-        assert method in ['MSE', 'PCC', 'SSIM', 'DSC'], "The chosen method '{}' is not"\
+        assert method in ['MSE', 'PCC', 'SSIM'], "The chosen method '{}' is not"\
             " available. Please ensure that you have selected one of 'MSE', 'PCC', 'SSIM'"\
-            ", 'DSC'".format(str(method))
+            .format(str(method))
         self.m_method = method
 
         assert temporal_median in ['slow', 'fast'], "The chosen temporal_median '{}' is"\
@@ -803,54 +806,42 @@ class FrameSimilarityModule(ProcessingModule):
         self.m_fwhm = fwhm
 
     @staticmethod
-    def _similarity(images, reference_index, N_pix, mode, fwhm, temporal_median=False):
+    def _similarity(images, reference_index, mode, fwhm, temporal_median=False):
         """
         Internal function. Returns the MSE as defined by Ruane et al. 2019
         """
-        def cov(P, Q):
-            """
-            Internal function. Returns the covariance as defined by Ruane et al. 2019
-            """
-            return 1 / (N_pix - 1) * np.sum((P - np.nanmean(P)) * (Q - np.nanmean(Q)))
-        def std(P):
-            """
-            Internal function. Returns the standard deviation as defined by Ruane et al. 2019
-            """
-            return np.sqrt(1 / (N_pix - 1) * np.sum(((P - np.nanmean(P)))**2))
 
         def _temporal_median(reference_index, images):
             """
             Internal function. Calculates the temporal median for all frames, except the one \
                 with the reference_index
             """
-            M = np.concatenate((images[:reference_index], images[reference_index+1:]))
-            return np.median(M, axis=0)
+            image_m = np.concatenate((images[:reference_index], images[reference_index+1:]))
+            return np.median(image_m, axis=0)
 
-        X_i = images[reference_index]
+        image_x_i = images[reference_index]
         if not temporal_median:
-            M = _temporal_median(reference_index, images=images)
+            image_m = _temporal_median(reference_index, images=images)
+        else:
+            image_m = temporal_median
+
         if mode == "MSE":
-            return reference_index, compare_nrmse(X_i, M)
+            return reference_index, compare_mse(image_x_i, image_m)
 
-        elif mode == "PCC":
-            PCC = cov(X_i, M) / (std(X_i) * std(M))
-            del X_i, M
-            return reference_index, PCC
+        if mode == "PCC":
+            # calculate the covariance matrix of the flattend images
+            cov_mat = np.cov(image_x_i.flatten(), image_m.flatten(), ddof=1)
+            # the variances are stored in the diagonal, therefore take the sqrt to obtain std
+            std = np.sqrt(np.diag(cov_mat))
+            # does not matter whether [0, 1] or [1, 0] as cov_mat is symmetrics
+            return reference_index, cov_mat[0, 1] / (std[0] * std[1])
 
-        elif mode == "SSIM":
+        if mode == "SSIM":
             if int(fwhm) % 2 == 0:
                 winsize = int(fwhm) + 1
             else:
                 winsize = int(fwhm)
-            return reference_index, compare_ssim(X_i, M, win_size=winsize)
-
-        elif mode == "DSC":
-            # make the images to binaries
-            X_i -= np.median(X_i)
-            X_i = X_i > 0
-            M = np.mean(M)
-            M = M > 0
-            return reference_index, np.sum(2 * X_i * M / (np.sum(X_i) + np.sum(M)))
+            return reference_index, compare_ssim(image_x_i, image_m, win_size=winsize)
 
 
     def run(self):
@@ -878,6 +869,8 @@ class FrameSimilarityModule(ProcessingModule):
         # overlay the same mask over all images
         mask = create_mask(im_shape, self.m_mask_radii)
         images = self.m_image_in_port.get_all()
+
+        # close the port during the calculations
         self.m_image_out_port.close_port()
 
         if self.m_temporal_median == 'fast':
@@ -885,17 +878,16 @@ class FrameSimilarityModule(ProcessingModule):
         else:
             temporal_median = False
 
-        if self.m_method != "SSIM":
+        if self.m_method != 'SSIM':
             images *= mask
+        else:
+            images = crop_image(images, None, int(self.m_mask_radii[1] * pixscale) + 1)
 
-        # count mask pixels for normalization
-        N_pix = int(np.sum(mask))
         # compare images and store similarity
-        similarity = np.zeros(nimages)
+        similarities = np.zeros(nimages)
 
         cpu = self._m_config_port.get_attribute("CPU")
 
-        print("cpu\t", cpu)
         pool = mp.Pool(cpu)
         async_results = []
 
@@ -904,7 +896,6 @@ class FrameSimilarityModule(ProcessingModule):
             async_results.append(pool.apply_async(FrameSimilarityModule._similarity,
                                                   args=(images,
                                                         i,
-                                                        N_pix,
                                                         self.m_method,
                                                         self.m_fwhm,
                                                         temporal_median)))
@@ -924,13 +915,14 @@ class FrameSimilarityModule(ProcessingModule):
         # get the results for every async_result object
         for async_result in async_results:
             reference, similarity = async_result.get()
-            similarity[reference] = similarity
+            similarities[reference] = similarity
 
         pool.terminate()
-        
+
+        # reopen the port after the calculation
         self.m_image_out_port.open_port()
         self.m_image_out_port.add_attribute("SIMILARITY" + "_" + self.m_method, \
-            similarity, static=False)
+            similarities, static=False)
         self.m_image_out_port.close_port()
 
 class FrameSortingModule(ProcessingModule):
