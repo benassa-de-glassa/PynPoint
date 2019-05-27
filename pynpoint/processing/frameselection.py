@@ -6,16 +6,16 @@ import sys
 import time
 import math
 import warnings
+import multiprocessing as mp
 
 import numpy as np
-import multiprocessing as mp
+from skimage.measure import compare_ssim, compare_mse
 
 from pynpoint.core.processing import ProcessingModule
 from pynpoint.util.image import crop_image, pixel_distance, create_mask
 from pynpoint.util.module import progress, memory_frames, locate_star
 from pynpoint.util.remove import write_selected_data, write_selected_attributes
 
-from skimage.measure import compare_ssim, compare_nrmse
 
 
 
@@ -837,6 +837,7 @@ class FrameSimilarityModule(ProcessingModule):
             return reference_index, cov_mat[0, 1] / (std[0] * std[1])
 
         if mode == "SSIM":
+            # winsize needs to be odd
             if int(fwhm) % 2 == 0:
                 winsize = int(fwhm) + 1
             else:
@@ -881,7 +882,7 @@ class FrameSimilarityModule(ProcessingModule):
         if self.m_method != 'SSIM':
             images *= mask
         else:
-            images = crop_image(images, None, int(self.m_mask_radii[1] * pixscale) + 1)
+            images = crop_image(images, None, int(self.m_mask_radii[1]))
 
         # compare images and store similarity
         similarities = np.zeros(nimages)
