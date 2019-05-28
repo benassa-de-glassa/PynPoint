@@ -618,8 +618,8 @@ class CombineTagsModule(ProcessingModule):
 
                 elif status == -1 and key[0:7] != 'History':
                     warnings.warn(f'The static keyword {key} is already used but with a different '
-                                  'value. It is advisable to only combine tags that descend from '
-                                  'the same data set.')
+                                  f'value. It is advisable to only combine tags that descend from '
+                                  f'the same data set.')
 
             for key in non_static_attr:
                 values = image_in_port[i].get_attribute(key)
@@ -642,8 +642,8 @@ class CombineTagsModule(ProcessingModule):
 
                             if status == -1:
                                 warnings.warn(f'The non-static keyword {key} is already used but '
-                                              'with different values. It is advisable to only '
-                                              'combine tags that descend from the same data set.')
+                                              f'with different values. It is advisable to only '
+                                              f'combine tags that descend from the same data set.')
 
                     else:
                         if status == 1:
@@ -658,6 +658,6 @@ class CombineTagsModule(ProcessingModule):
         sys.stdout.write('Running CombineTagsModule... [DONE]\n')
         sys.stdout.flush()
 
-        history = 'number of input tags = {np.size(self.m_image_in_tags)}'
+        history = f'number of input tags = {np.size(self.m_image_in_tags)}'
         self.m_image_out_port.add_history('CombineTagsModule', history)
         self.m_image_out_port.close_port()
