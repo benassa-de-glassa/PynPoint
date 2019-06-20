@@ -209,6 +209,7 @@ class ReadingModule(PypelineModule, metaclass=ABCMeta):
         algorithm behind the module.
         """
 
+
 class WritingModule(PypelineModule, metaclass=ABCMeta):
     """
     The abstract class WritingModule is an interface for processing steps in the pipeline which
@@ -489,6 +490,9 @@ class ProcessingModule(PypelineModule, metaclass=ABCMeta):
                                data_dim=3,
                                keep_attributes=False)
 
+        image_in_port.close_port()
+        image_out_port.close_port()
+
         capsule = LineProcessingCapsule(image_in_port=image_in_port,
                                         image_out_port=image_out_port,
                                         num_proc=cpu,
@@ -622,7 +626,9 @@ class ProcessingModule(PypelineModule, metaclass=ABCMeta):
                                    data_dim=len(result_shape)+1,
                                    keep_attributes=False)
 
+            image_in_port.close_port()
             image_out_port.close_port()
+
             capsule = StackProcessingCapsule(image_in_port=image_in_port,
                                              image_out_port=image_out_port,
                                              num_proc=cpu,

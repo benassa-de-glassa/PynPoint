@@ -59,26 +59,20 @@ class StackReader(TaskCreator):
         NoneType
             None
         """
+
         with self.m_data_mutex:
-            self.m_data_in_port.open_port()
+            self.m_data_in_port._check_status_and_activate()
             nimages = self.m_data_in_port.get_shape()[0]
             self.m_data_in_port.close_port()
-        # images = self.m_data_in_port.get_all()
-        # self.m_data_in_port.open_port()
-        with self.m_data_mutex:
-            nimages = self.m_data_in_port.get_shape()[0]
-        # self.m_data_in_port.close_port()
+
         i = 0
         while i < nimages:
             j = min((i + self.m_stack_size), nimages)
 
             # lock mutex and read data
             with self.m_data_mutex:
-                self.m_data_in_port.open_port()
-                time.sleep(1)
-                # nimages = self.m_data_in_port.get_shape()[0]
-                # read images from i to j
-                tmp_data = self.m_data_in_port[i:j, ]
+                self.m_data_in_port._check_status_and_activate()
+                tmp_data = self.m_data_in_port[i:j, ]  # read images from i to j
                 self.m_data_in_port.close_port()
 
             # first dimension (start, stop, step)

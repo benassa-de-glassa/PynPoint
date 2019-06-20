@@ -17,6 +17,7 @@ warnings.simplefilter('always')
 
 limit = 1e-10
 
+
 class TestResizing:
 
     def setup_class(self):
@@ -157,11 +158,9 @@ class TestResizing:
                                     image_in_tag='read',
                                     image_out_tag='read_repeated',
                                     repeat=50)
+
         self.pipeline.add_module(module)
         self.pipeline.run_module('repeat')
-
-        # with h5py.File(self.test_dir+'PynPoint_database.hdf5', 'a') as hdf_file:
-        #     hdf_file['config'].attrs['CPU'] = 1
 
         module = RemoveLinesModule(lines=(2, 5, 0, 9),
                                    name_in='remove_slow',
