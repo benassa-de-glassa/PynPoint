@@ -622,6 +622,7 @@ class ProcessingModule(PypelineModule, metaclass=ABCMeta):
                                    data_dim=len(result_shape)+1,
                                    keep_attributes=False)
 
+            image_out_port.close_port()
             capsule = StackProcessingCapsule(image_in_port=image_in_port,
                                              image_out_port=image_out_port,
                                              num_proc=cpu,
@@ -633,6 +634,8 @@ class ProcessingModule(PypelineModule, metaclass=ABCMeta):
 
             capsule.run()
 
+            # reopen the port such that attributes can be written in the module
+            image_out_port.open_port()
             sys.stdout.write(' [DONE]\n')
             sys.stdout.flush()
 

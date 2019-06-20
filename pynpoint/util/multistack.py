@@ -3,7 +3,7 @@ Utilities for multiprocessing of stacks of images.
 """
 
 import sys
-
+import time
 import numpy as np
 
 from pynpoint.util.module import update_arguments
@@ -59,17 +59,27 @@ class StackReader(TaskCreator):
         NoneType
             None
         """
-
-        nimages = self.m_data_in_port.get_shape()[0]
-        images = self.m_data_in_port.get_all()
+        with self.m_data_mutex:
+            self.m_data_in_port.open_port()
+            nimages = self.m_data_in_port.get_shape()[0]
+            self.m_data_in_port.close_port()
+        # images = self.m_data_in_port.get_all()
+        # self.m_data_in_port.open_port()
+        with self.m_data_mutex:
+            nimages = self.m_data_in_port.get_shape()[0]
+        # self.m_data_in_port.close_port()
         i = 0
         while i < nimages:
             j = min((i + self.m_stack_size), nimages)
 
             # lock mutex and read data
-            # with self.m_data_mutex:
-            # read images from i to j
-            tmp_data = images[i:j, ]
+            with self.m_data_mutex:
+                self.m_data_in_port.open_port()
+                time.sleep(1)
+                # nimages = self.m_data_in_port.get_shape()[0]
+                # read images from i to j
+                tmp_data = self.m_data_in_port[i:j, ]
+                self.m_data_in_port.close_port()
 
             # first dimension (start, stop, step)
             stack_slice = [(i, j, None)]
@@ -82,7 +92,7 @@ class StackReader(TaskCreator):
             self.m_task_queue.put(TaskInput(tmp_data, param))
 
             i = j
-        del images  # for space
+        # del images  # for space
         self.create_poison_pills()
 
 
