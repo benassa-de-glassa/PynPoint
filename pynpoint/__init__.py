@@ -29,11 +29,21 @@ from pynpoint.processing.darkflat import DarkCalibrationModule, \
 from pynpoint.processing.extract import StarExtractionModule, \
                                         ExtractBinaryModule
 
+<<<<<<< HEAD
+=======
+from pynpoint.processing.filter import GaussianFilterModule
+
+>>>>>>> upstream/master
 from pynpoint.processing.fluxposition import FakePlanetModule, \
                                              SimplexMinimizationModule, \
                                              FalsePositiveModule, \
                                              MCMCsamplingModule, \
+<<<<<<< HEAD
                                              AperturePhotometryModule
+=======
+                                             AperturePhotometryModule, \
+                                             SystematicErrorModule
+>>>>>>> upstream/master
 
 from pynpoint.processing.frameselection import RemoveFramesModule, \
                                                FrameSelectionModule, \
@@ -65,7 +75,10 @@ from pynpoint.processing.resizing import CropImagesModule, \
                                          RemoveLinesModule
 
 from pynpoint.processing.stacksubset import StackAndSubsetModule, \
+<<<<<<< HEAD
                                             MeanCubeModule, \
+=======
+>>>>>>> upstream/master
                                             StackCubesModule, \
                                             DerotateAndStackModule, \
                                             CombineTagsModule

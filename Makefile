@@ -63,4 +63,8 @@ clean-test:
 	rm -f junit-py27.xml
 	rm -f junit-py36.xml
 	rm -f junit-py37.xml
+<<<<<<< HEAD
 	rm -rf .pytest_cache/
+=======
+	rm -rf .pytest_cache/
+>>>>>>> upstream/master

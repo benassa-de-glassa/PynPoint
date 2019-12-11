@@ -2,8 +2,13 @@
 Pipeline modules for estimating detection limits.
 """
 
+<<<<<<< HEAD
 import sys
 import os
+=======
+import os
+import sys
+>>>>>>> upstream/master
 import math
 import time
 import warnings
@@ -262,16 +267,33 @@ class ContrastCurveModule(ProcessingModule):
 
         pool.close()
 
+<<<<<<< HEAD
+=======
+        start_time = time.time()
+
+>>>>>>> upstream/master
         # wait for all processes to finish
         while mp.active_children():
             # number of finished processes
             nfinished = sum([i.ready() for i in async_results])
 
+<<<<<<< HEAD
             progress(int(nfinished/len(positions)), 1, 'Running ContrastCurveModule...')
+=======
+            progress(nfinished, len(positions), 'Calculating detection limits...', start_time)
+>>>>>>> upstream/master
 
             # check if new processes have finished every 5 seconds
             time.sleep(5)
 
+<<<<<<< HEAD
+=======
+        if nfinished != len(positions):
+            sys.stdout.write('\r                                                      ')
+            sys.stdout.write('\rCalculating detection limits... [DONE]\n')
+            sys.stdout.flush()
+
+>>>>>>> upstream/master
         # get the results for every async_result object
         for item in async_results:
             result.append(item.get())
@@ -300,9 +322,12 @@ class ContrastCurveModule(ProcessingModule):
 
         self.m_contrast_out_port.set_all(limits, data_dim=2)
 
+<<<<<<< HEAD
         sys.stdout.write('\rRunning ContrastCurveModule... [DONE]\n')
         sys.stdout.flush()
 
+=======
+>>>>>>> upstream/master
         history = f'{self.m_threshold[0]} = {self.m_threshold[1]}'
         self.m_contrast_out_port.add_history('ContrastCurveModule', history)
         self.m_contrast_out_port.copy_attributes(self.m_image_in_port)
@@ -339,7 +364,11 @@ class MassLimitsModule(ProcessingModule):
             limits, and the upper and lower one sigma deviation as calculated for the azimuthal
             variance on the contrast limits.
         model_file: str
+<<<<<<< HEAD
             Absolute path to the file containing the model data. Must be in the same format as the
+=======
+            Path to the file containing the model data. Must be in the same format as the
+>>>>>>> upstream/master
             grids found on https://phoenix.ens-lyon.fr/Grids/. Any of the isochrones files from
             this website can be used.
         star_prop : dict
@@ -381,6 +410,14 @@ class MassLimitsModule(ProcessingModule):
         Reads the data from the model file and structures it. Returns an array of available model
         ages and a list of model data for each age.
 
+<<<<<<< HEAD
+=======
+        Parameters
+        -------
+        model_file: str
+            Path to the file containing the model data.
+
+>>>>>>> upstream/master
         Returns
         -------
         list(float, )
@@ -492,9 +529,12 @@ class MassLimitsModule(ProcessingModule):
             None
         """
 
+<<<<<<< HEAD
         sys.stdout.write('Running MassLimitsModule...')
         sys.stdout.flush()
 
+=======
+>>>>>>> upstream/master
         model_age, model_data, model_header = self.read_model(self.m_model_file)
 
         assert self.m_instr_filter in model_header, 'The selected filter was not found in the ' \
@@ -514,6 +554,11 @@ class MassLimitsModule(ProcessingModule):
         age_eval = self.m_star_age*np.ones_like(contrast)
         mag_eval = self.m_star_abs+contrast
 
+<<<<<<< HEAD
+=======
+        print('Interpolating isochrones...', end='')
+
+>>>>>>> upstream/master
         mass = self.interpolate_model(age_eval=age_eval,
                                       mag_eval=mag_eval,
                                       filter_index=filter_index,
@@ -535,8 +580,12 @@ class MassLimitsModule(ProcessingModule):
         mass_limits = np.column_stack((separation, mass, mass_upper, mass_lower))
         self.m_mass_out_port.set_all(mass_limits, data_dim=2)
 
+<<<<<<< HEAD
         sys.stdout.write(' [DONE]\n')
         sys.stdout.flush()
+=======
+        print(' [DONE]')
+>>>>>>> upstream/master
 
         history = f'filter = {self.m_instr_filter}'
         self.m_mass_out_port.add_history('MassLimitsModule', history)

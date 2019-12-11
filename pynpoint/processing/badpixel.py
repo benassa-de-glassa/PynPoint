@@ -2,7 +2,10 @@
 Pipeline modules for the detection and interpolation of bad pixels.
 """
 
+<<<<<<< HEAD
 import sys
+=======
+>>>>>>> upstream/master
 import copy
 import warnings
 
@@ -313,7 +316,11 @@ class BadPixelSigmaFilterModule(ProcessingModule):
         self.apply_function_to_images(_bad_pixel_sigma_filter,
                                       self.m_image_in_port,
                                       self.m_image_out_port,
+<<<<<<< HEAD
                                       'Running BadPixelSigmaFilterModule',
+=======
+                                      'Bad pixel sigma filter',
+>>>>>>> upstream/master
                                       func_args=(self.m_box,
                                                  self.m_sigma,
                                                  self.m_iterate))
@@ -410,8 +417,12 @@ class BadPixelMapModule(ProcessingModule):
 
             max_dark = np.max(dark)
 
+<<<<<<< HEAD
             sys.stdout.write(f'Threshold dark frame [counts] = {max_dark*self.m_dark_threshold}\n')
             sys.stdout.flush()
+=======
+            print(f'Threshold dark frame = {max_dark*self.m_dark_threshold}')
+>>>>>>> upstream/master
 
             bpmap = np.ones(dark.shape)
             bpmap[np.where(dark > max_dark*self.m_dark_threshold)] = 0
@@ -424,8 +435,12 @@ class BadPixelMapModule(ProcessingModule):
 
             max_flat = np.max(flat)
 
+<<<<<<< HEAD
             sys.stdout.write(f'Threshold flat field [counts] = {max_flat*self.m_flat_threshold}\n')
             sys.stdout.flush()
+=======
+            print(f'Threshold flat field [counts] = {max_flat*self.m_flat_threshold}')
+>>>>>>> upstream/master
 
             if self.m_dark_port is None:
                 bpmap = np.ones(flat.shape)
@@ -521,7 +536,11 @@ class BadPixelInterpolationModule(ProcessingModule):
         self.apply_function_to_images(_image_interpolation,
                                       self.m_image_in_port,
                                       self.m_image_out_port,
+<<<<<<< HEAD
                                       'Running BadPixelInterpolationModule')
+=======
+                                      'Bad pixel interpolation')
+>>>>>>> upstream/master
 
         history = f'iterations = {self.m_iterations}'
         self.m_image_out_port.copy_attributes(self.m_image_in_port)
@@ -602,16 +621,24 @@ class BadPixelTimeFilterModule(ProcessingModule):
 
             return timeline
 
+<<<<<<< HEAD
         sys.stdout.write('Running BadPixelTimeFilterModule...')
         sys.stdout.flush()
+=======
+        print('Temporal filtering of bad pixels ...', end='')
+>>>>>>> upstream/master
 
         self.apply_function_in_time(_time_filter,
                                     self.m_image_in_port,
                                     self.m_image_out_port,
                                     func_args=(self.m_sigma, ))
 
+<<<<<<< HEAD
         sys.stdout.write(' [DONE]\n')
         sys.stdout.flush()
+=======
+        print(' [DONE]')
+>>>>>>> upstream/master
 
         history = f'sigma = {self.m_sigma}'
         self.m_image_out_port.copy_attributes(self.m_image_in_port)

@@ -92,6 +92,14 @@ Extract Star
 * :class:`~pynpoint.processing.extract.StarExtractionModule` (CPU): Locate and crop the position of the star.
 * :class:`~pynpoint.processing.extract.ExtractBinaryModule` (CPU): Extract a PSF which rotates across a stack of images.
 
+<<<<<<< HEAD
+=======
+Filters
+~~~~~~~
+
+* :class:`~pynpoint.processing.filter.GaussianFilterModule`: Apply a Gaussian filter to the images.
+
+>>>>>>> upstream/master
 Flux and Position
 ~~~~~~~~~~~~~~~~~
 
@@ -100,6 +108,10 @@ Flux and Position
 * :class:`~pynpoint.processing.fluxposition.FalsePositiveModule`: Compute the signal-to-noise ratio and false positive fraction.
 * :class:`~pynpoint.processing.fluxposition.MCMCsamplingModule` (CPU): Estimate the flux and position of a planet with MCMC sampling.
 * :class:`~pynpoint.processing.fluxposition.AperturePhotometryModule` (CPU): Compute the integrated flux at a position.
+<<<<<<< HEAD
+=======
+* :class:`~pynpoint.processing.fluxposition.SystematicErrorModule`: Compute the systematic errors on the flux and position.
+>>>>>>> upstream/master
 
 Frame Selection
 ~~~~~~~~~~~~~~~

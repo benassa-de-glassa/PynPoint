@@ -8,7 +8,10 @@ python:
 
 env:
   - NUMBA_DISABLE_JIT=1
+<<<<<<< HEAD
   # - COVERALLS_PARALLEL=true
+=======
+>>>>>>> upstream/master
 
 before_install:
   - sudo apt-get install ncompress
@@ -17,8 +20,14 @@ install:
   - pip install -r requirements.txt
   - pip install pytest-cov
   - pip install coveralls
+<<<<<<< HEAD
   - pip install sphinx
   - pip install sphinx_rtd_theme
+=======
+  - pip install PyYAML
+  - pip install sphinx
+  - pip install sphinx-rtd-theme
+>>>>>>> upstream/master
 
 script:
   - make docs

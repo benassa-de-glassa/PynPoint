@@ -2,7 +2,10 @@
 Pipeline modules for resizing of images.
 """
 
+<<<<<<< HEAD
 import sys
+=======
+>>>>>>> upstream/master
 import math
 import time
 
@@ -94,7 +97,11 @@ class CropImagesModule(ProcessingModule):
         for i in range(len(frames[:-1])):
 
             # Update progress bar
+<<<<<<< HEAD
             progress(i, len(frames[:-1]), 'Running CropImagesModule...', start_time)
+=======
+            progress(i, len(frames[:-1]), 'Cropping images...', start_time)
+>>>>>>> upstream/master
 
             # Select and crop images in the current chunk
             images = self.m_image_in_port[frames[i]:frames[i+1], ]
@@ -103,10 +110,13 @@ class CropImagesModule(ProcessingModule):
             # Write cropped images to output port
             self.m_image_out_port.append(images, data_dim=3)
 
+<<<<<<< HEAD
         # Update progress bar (cropping of images is finished)
         sys.stdout.write('Running CropImagesModule... [DONE]\n')
         sys.stdout.flush()
 
+=======
+>>>>>>> upstream/master
         # Save history and copy attributes
         history = f'image size [pix] = {self.m_size}'
         self.m_image_out_port.add_history('CropImagesModule', history)
@@ -194,7 +204,11 @@ class ScaleImagesModule(ProcessingModule):
         self.apply_function_to_images(_image_scaling,
                                       self.m_image_in_port,
                                       self.m_image_out_port,
+<<<<<<< HEAD
                                       'Running ScaleImagesModule',
+=======
+                                      'Scaling images',
+>>>>>>> upstream/master
                                       func_args=(self.m_scaling_y,
                                                  self.m_scaling_x,
                                                  self.m_scaling_flux))
@@ -278,7 +292,11 @@ class AddLinesModule(ProcessingModule):
         start_time = time.time()
 
         for i in range(len(frames[:-1])):
+<<<<<<< HEAD
             progress(i, len(frames[:-1]), 'Running AddLinesModule...', start_time)
+=======
+            progress(i, len(frames[:-1]), 'Adding lines...', start_time)
+>>>>>>> upstream/master
 
             image_in = self.m_image_in_port[frames[i]:frames[i+1], ]
 
@@ -290,9 +308,12 @@ class AddLinesModule(ProcessingModule):
 
             self.m_image_out_port.append(image_out, data_dim=3)
 
+<<<<<<< HEAD
         sys.stdout.write('Running AddLinesModule... [DONE]\n')
         sys.stdout.flush()
 
+=======
+>>>>>>> upstream/master
         history = f'number of lines = {self.m_lines}'
         self.m_image_out_port.add_history('AddLinesModule', history)
         self.m_image_out_port.copy_attributes(self.m_image_in_port)
@@ -357,7 +378,11 @@ class RemoveLinesModule(ProcessingModule):
         start_time = time.time()
 
         for i in range(len(frames[:-1])):
+<<<<<<< HEAD
             progress(i, len(frames[:-1]), 'Running RemoveLinesModule...', start_time)
+=======
+            progress(i, len(frames[:-1]), 'Removing lines...', start_time)
+>>>>>>> upstream/master
 
             image_in = self.m_image_in_port[frames[i]:frames[i+1], ]
 
@@ -367,9 +392,12 @@ class RemoveLinesModule(ProcessingModule):
 
             self.m_image_out_port.append(image_out, data_dim=3)
 
+<<<<<<< HEAD
         sys.stdout.write('Running RemoveLinesModule... [DONE]\n')
         sys.stdout.flush()
 
+=======
+>>>>>>> upstream/master
         history = f'number of lines = {self.m_lines}'
         self.m_image_out_port.add_history('RemoveLinesModule', history)
         self.m_image_out_port.copy_attributes(self.m_image_in_port)

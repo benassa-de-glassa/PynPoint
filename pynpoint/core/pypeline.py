@@ -3,7 +3,10 @@ Module which capsules the methods of the Pypeline.
 """
 
 import os
+<<<<<<< HEAD
 import sys
+=======
+>>>>>>> upstream/master
 import warnings
 import configparser
 import collections
@@ -17,6 +20,10 @@ import pynpoint
 from pynpoint.core.attributes import get_attributes
 from pynpoint.core.dataio import DataStorage
 from pynpoint.core.processing import PypelineModule, ReadingModule, WritingModule, ProcessingModule
+<<<<<<< HEAD
+=======
+from pynpoint.util.module import module_info, input_info, output_info
+>>>>>>> upstream/master
 
 
 class Pypeline:
@@ -57,14 +64,23 @@ class Pypeline:
             None
         """
 
+<<<<<<< HEAD
         sys.stdout.write('Initiating PynPoint v'+pynpoint.__version__+'...')
         sys.stdout.flush()
+=======
+        pynpoint_version = 'PynPoint v' + pynpoint.__version__
+
+        print(len(pynpoint_version) * '=')
+        print(pynpoint_version)
+        print(len(pynpoint_version) * '=' + '\n')
+>>>>>>> upstream/master
 
         self._m_working_place = working_place_in
         self._m_input_place = input_place_in
         self._m_output_place = output_place_in
 
         self._m_modules = collections.OrderedDict()
+<<<<<<< HEAD
         self.m_data_storage = DataStorage(os.path.join(working_place_in, 'PynPoint_database.hdf5'))
 
         self._config_init()
@@ -72,6 +88,14 @@ class Pypeline:
         sys.stdout.write(' [DONE]\n')
         sys.stdout.flush()
 
+=======
+
+        self.m_data_storage = DataStorage(os.path.join(working_place_in, 'PynPoint_database.hdf5'))
+        print(f'Database: {self.m_data_storage._m_location}')
+
+        self._config_init()
+
+>>>>>>> upstream/master
     def __setattr__(self,
                     key,
                     value):
@@ -218,7 +242,12 @@ class Pypeline:
 
             hdf.close()
 
+<<<<<<< HEAD
         config_file = self._m_working_place+'/PynPoint_config.ini'
+=======
+        config_file = os.path.join(self._m_working_place, 'PynPoint_config.ini')
+        print(f'Configuration: {config_file}\n')
+>>>>>>> upstream/master
 
         attributes = get_attributes()
         attributes['CPU']['value'] = multiprocessing.cpu_count()
@@ -233,6 +262,19 @@ class Pypeline:
 
         _write_config(attributes)
 
+<<<<<<< HEAD
+=======
+        n_cpu = attributes['CPU']['value']
+
+        if 'OMP_NUM_THREADS' in os.environ:
+            n_thread = os.environ['OMP_NUM_THREADS']
+        else:
+            n_thread = 'not set'
+
+        print(f'Number of CPUs: {n_cpu}')
+        print(f'Number of threads: {n_thread}')
+
+>>>>>>> upstream/master
     def add_module(self,
                    module):
         """
@@ -379,9 +421,12 @@ class Pypeline:
             None
         """
 
+<<<<<<< HEAD
         sys.stdout.write('Validating Pypeline...')
         sys.stdout.flush()
 
+=======
+>>>>>>> upstream/master
         validation = self.validate_pipeline()
 
         if not validation[0]:
@@ -389,11 +434,29 @@ class Pypeline:
                                  f'under a tag which is not created by a previous module or '
                                  f'does not exist in the database.')
 
+<<<<<<< HEAD
         sys.stdout.write(' [DONE]\n')
         sys.stdout.flush()
 
         for key in self._m_modules:
             self._m_modules[key].run()
+=======
+        for name in self._m_modules:
+            module_info(self._m_modules[name])
+
+            if hasattr(self._m_modules[name], '_m_input_ports'):
+                if len(self._m_modules[name]._m_input_ports) > 0:
+                    input_info(self._m_modules[name])
+
+            self._m_modules[name].run()
+
+            if hasattr(self._m_modules[name], '_m_output_ports'):
+                output_shape = {}
+                for item in self._m_modules[name]._m_output_ports:
+                    output_shape[item] = self.get_shape(item)
+
+                output_info(self._m_modules[name], output_shape)
+>>>>>>> upstream/master
 
     def run_module(self,
                    name):
@@ -412,25 +475,51 @@ class Pypeline:
         """
 
         if name in self._m_modules:
+<<<<<<< HEAD
             sys.stdout.write(f'Validating module \'{name}\'...')
             sys.stdout.flush()
 
+=======
+>>>>>>> upstream/master
             validation = self.validate_pipeline_module(name)
 
             if not validation[0]:
                 raise AttributeError(f'Pipeline module \'{validation[1]}\' is looking for data '
                                      f'under a tag which does not exist in the database.')
 
+<<<<<<< HEAD
             sys.stdout.write(' [DONE]\n')
             sys.stdout.flush()
 
             self._m_modules[name].run()
 
+=======
+            module_info(self._m_modules[name])
+
+            if hasattr(self._m_modules[name], '_m_input_ports'):
+                if len(self._m_modules[name]._m_input_ports) > 0:
+                    input_info(self._m_modules[name])
+
+            self._m_modules[name].run()
+
+            if hasattr(self._m_modules[name], '_m_output_ports'):
+                output_shape = {}
+                for item in self._m_modules[name]._m_output_ports:
+                    output_shape[item] = self.get_shape(item)
+
+                output_info(self._m_modules[name], output_shape)
+
+>>>>>>> upstream/master
         else:
             warnings.warn(f'Module \'{name}\' not found.')
 
     def get_data(self,
+<<<<<<< HEAD
                  tag):
+=======
+                 tag,
+                 data_range=None):
+>>>>>>> upstream/master
         """
         Function for accessing data in the central database.
 
@@ -438,6 +527,12 @@ class Pypeline:
         ----------
         tag : str
             Database tag.
+<<<<<<< HEAD
+=======
+        data_range : tuple(int, int), None
+            Slicing range which can be used to select a subset of images from a 3D dataset. All
+            data are selected if set to None.
+>>>>>>> upstream/master
 
         Returns
         -------
@@ -447,7 +542,15 @@ class Pypeline:
 
         self.m_data_storage.open_connection()
 
+<<<<<<< HEAD
         data = np.asarray(self.m_data_storage.m_data_bank[tag])
+=======
+        if data_range is None:
+            data = np.asarray(self.m_data_storage.m_data_bank[tag])
+
+        else:
+            data = np.asarray(self.m_data_storage.m_data_bank[tag][data_range[0]:data_range[1], ])
+>>>>>>> upstream/master
 
         self.m_data_storage.close_connection()
 
@@ -606,7 +709,14 @@ class Pypeline:
 
         self.m_data_storage.open_connection()
 
+<<<<<<< HEAD
         data_shape = self.m_data_storage.m_data_bank[tag].shape
+=======
+        if tag in self.m_data_storage.m_data_bank:
+            data_shape = self.m_data_storage.m_data_bank[tag].shape
+        else:
+            data_shape = None
+>>>>>>> upstream/master
 
         self.m_data_storage.close_connection()
 

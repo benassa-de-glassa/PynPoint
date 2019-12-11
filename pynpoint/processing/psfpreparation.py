@@ -2,7 +2,10 @@
 Pipeline modules to prepare the data for the PSF subtraction.
 """
 
+<<<<<<< HEAD
 import sys
+=======
+>>>>>>> upstream/master
 import time
 import warnings
 
@@ -134,7 +137,11 @@ class PSFpreparationModule(ProcessingModule):
         for i, _ in enumerate(frames[:-1]):
 
             # Print progress to command line
+<<<<<<< HEAD
             progress(i, len(frames[:-1]), 'Running PSFpreparationModule...', start_time)
+=======
+            progress(i, len(frames[:-1]), 'Preparing images for PSF subtraction...', start_time)
+>>>>>>> upstream/master
 
             # Get the images and ensure they have the correct 3D shape with the following
             # three dimensions: (batch_size, height, width)
@@ -183,9 +190,12 @@ class PSFpreparationModule(ProcessingModule):
                                                 value=self.m_edge_size * pixscale,
                                                 static=True)
 
+<<<<<<< HEAD
         sys.stdout.write('Running PSFpreparationModule... [DONE]\n')
         sys.stdout.flush()
 
+=======
+>>>>>>> upstream/master
 
 class AngleInterpolationModule(ProcessingModule):
     """
@@ -250,7 +260,11 @@ class AngleInterpolationModule(ProcessingModule):
 
         start_time = time.time()
         for i, _ in enumerate(parang_start):
+<<<<<<< HEAD
             progress(i, len(parang_start), 'Running AngleInterpolationModule...', start_time)
+=======
+            progress(i, len(parang_start), 'Interpolating parallactic angles...', start_time)
+>>>>>>> upstream/master
 
             if parang_start[i] < -170. and parang_end[i] > 170.:
                 parang_start[i] += 360.
@@ -268,9 +282,12 @@ class AngleInterpolationModule(ProcessingModule):
                                                    parang_end[i],
                                                    num=steps[i]))
 
+<<<<<<< HEAD
         sys.stdout.write('Running AngleInterpolationModule... [DONE]\n')
         sys.stdout.flush()
 
+=======
+>>>>>>> upstream/master
         self.m_data_out_port.add_attribute('PARANG',
                                            new_angles,
                                            static=False)
@@ -354,7 +371,11 @@ class SortParangModule(ProcessingModule):
 
         start_time = time.time()
         for i, _ in enumerate(frames[:-1]):
+<<<<<<< HEAD
             progress(i, len(frames[:-1]), 'Running SortParangModule...', start_time)
+=======
+            progress(i, len(frames[:-1]), 'Sorting images in time...', start_time)
+>>>>>>> upstream/master
 
             index_new[frames[i]:frames[i+1]] = index[index_sort[frames[i]:frames[i+1]]]
 
@@ -368,9 +389,12 @@ class SortParangModule(ProcessingModule):
             for _, item in enumerate(index_sort[frames[i]:frames[i+1]]):
                 self.m_image_out_port.append(self.m_image_in_port[item, ], data_dim=3)
 
+<<<<<<< HEAD
         sys.stdout.write('Running SortParangModule... [DONE]\n')
         sys.stdout.flush()
 
+=======
+>>>>>>> upstream/master
         self.m_image_out_port.copy_attributes(self.m_image_in_port)
         self.m_image_out_port.add_history('SortParangModule', 'sorted by INDEX')
         self.m_image_out_port.add_attribute('INDEX', index_new, static=False)
@@ -565,8 +589,17 @@ class AngleCalculationModule(ProcessingModule):
         new_angles = np.array([])
         pupil_pos_arr = np.array([])
 
+<<<<<<< HEAD
         # Calculate parallactic angles for each cube
         for i, tmp_steps in enumerate(steps):
+=======
+        start_time = time.time()
+
+        # Calculate parallactic angles for each cube
+        for i, tmp_steps in enumerate(steps):
+            progress(i, len(steps), 'Calculating parallactic angles...', start_time)
+
+>>>>>>> upstream/master
             t = Time(obs_dates[i].decode('utf-8'),
                      location=EarthLocation(lat=tel_lat, lon=tel_lon))
 
@@ -619,9 +652,12 @@ class AngleCalculationModule(ProcessingModule):
 
         self.m_data_out_port.add_attribute('PARANG', new_angles_corr, static=False)
 
+<<<<<<< HEAD
         sys.stdout.write('Running AngleCalculationModule... [DONE]\n')
         sys.stdout.flush()
 
+=======
+>>>>>>> upstream/master
 
 class SDIpreparationModule(ProcessingModule):
     """
@@ -694,7 +730,11 @@ class SDIpreparationModule(ProcessingModule):
 
         start_time = time.time()
         for i in range(nimages):
+<<<<<<< HEAD
             progress(i, nimages, 'Running SDIpreparationModule...', start_time)
+=======
+            progress(i, nimages, 'Preparing images for SDI...', start_time)
+>>>>>>> upstream/master
 
             image = self.m_image_in_port[i, ]
 
@@ -718,9 +758,12 @@ class SDIpreparationModule(ProcessingModule):
 
             self.m_image_out_port.append(im_crop, data_dim=3)
 
+<<<<<<< HEAD
         sys.stdout.write('Running SDIpreparationModule... [DONE]\n')
         sys.stdout.flush()
 
+=======
+>>>>>>> upstream/master
         history = f'(line, continuum) = ({self.m_line_wvl}, {self.m_cnt_wvl})'
         self.m_image_out_port.copy_attributes(self.m_image_in_port)
         self.m_image_out_port.add_history('SDIpreparationModule', history)

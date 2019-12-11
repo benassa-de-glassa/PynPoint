@@ -3,7 +3,10 @@ Interfaces for pipeline modules.
 """
 
 import os
+<<<<<<< HEAD
 import sys
+=======
+>>>>>>> upstream/master
 import time
 import warnings
 
@@ -530,7 +533,11 @@ class ProcessingModule(PypelineModule, metaclass=ABCMeta):
         image_out_port : pynpoint.core.dataio.OutputPort
             Output port which is linked to the results.
         message : str
+<<<<<<< HEAD
             Progress message that is printed.
+=======
+            Progress message.
+>>>>>>> upstream/master
         func_args : tuple
             Additional arguments that are required by the input function.
 
@@ -566,9 +573,12 @@ class ProcessingModule(PypelineModule, metaclass=ABCMeta):
 
             image_out_port.set_all(np.asarray(result), keep_attributes=True)
 
+<<<<<<< HEAD
             sys.stdout.write(message+' [DONE]\n')
             sys.stdout.flush()
 
+=======
+>>>>>>> upstream/master
         elif cpu == 1:
             # process images one-by-one with a single process if CPU is set to 1
             image_out_port.del_all_attributes()
@@ -591,12 +601,17 @@ class ProcessingModule(PypelineModule, metaclass=ABCMeta):
                 elif result.ndim == 2:
                     image_out_port.append(result, data_dim=3)
 
+<<<<<<< HEAD
             sys.stdout.write(message+' [DONE]\n')
             sys.stdout.flush()
 
         else:
             sys.stdout.write(message)
             sys.stdout.flush()
+=======
+        else:
+            print(message, end='')
+>>>>>>> upstream/master
 
             # process images in parallel in stacks of MEMORY/CPU images
             image_out_port.del_all_attributes()
@@ -630,8 +645,12 @@ class ProcessingModule(PypelineModule, metaclass=ABCMeta):
 
             capsule.run()
 
+<<<<<<< HEAD
             sys.stdout.write(' [DONE]\n')
             sys.stdout.flush()
+=======
+            print(' [DONE]')
+>>>>>>> upstream/master
 
     def get_all_input_tags(self):
         """
@@ -661,6 +680,10 @@ class ProcessingModule(PypelineModule, metaclass=ABCMeta):
     def run(self):
         """
         Abstract interface for the run method of a
+<<<<<<< HEAD
         :class:`pynpoint.core.processing.ProcessingModule` which inheres the actual
+=======
+        :class:`~pynpoint.core.processing.ProcessingModule` which inheres the actual
+>>>>>>> upstream/master
         algorithm behind the module.
         """

@@ -6,9 +6,14 @@ import numpy as np
 
 from pynpoint.core.pypeline import Pypeline
 from pynpoint.readwrite.fitsreading import FitsReadingModule
+<<<<<<< HEAD
 from pynpoint.processing.stacksubset import StackAndSubsetModule, MeanCubeModule, \
                                             DerotateAndStackModule, CombineTagsModule, \
                                             StackCubesModule
+=======
+from pynpoint.processing.stacksubset import StackAndSubsetModule, StackCubesModule, \
+                                            DerotateAndStackModule, CombineTagsModule
+>>>>>>> upstream/master
 from pynpoint.util.tests import create_config, create_star_data, remove_test_data
 
 warnings.simplefilter('always')
@@ -89,6 +94,7 @@ class TestStackSubset:
         assert np.allclose(data, parang, rtol=limit, atol=0.)
         assert data.shape == (10, )
 
+<<<<<<< HEAD
     def test_mean_cube(self):
 
         with pytest.warns(DeprecationWarning) as warning:
@@ -117,6 +123,8 @@ class TestStackSubset:
         assert np.allclose(np.mean(attribute), 1, rtol=limit, atol=0.)
         assert attribute.shape == (4, )
 
+=======
+>>>>>>> upstream/master
     def test_stack_cube(self):
 
         module = StackCubesModule(name_in='stackcube',

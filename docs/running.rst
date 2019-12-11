@@ -11,6 +11,7 @@ As a first example, we provide a preprocessed dataset of beta Pic in the M' filt
 First Example
 -------------
 
+<<<<<<< HEAD
 The following script downloads the data (13 MB), runs the PSF subtraction with PynPoint, and plots an image of the median-collapsed residuals::
 
     import os
@@ -74,6 +75,73 @@ The following script downloads the data (13 MB), runs the PSF subtraction with P
     plt.ylabel('Dec. offset [arcsec]', fontsize=12)
     plt.colorbar()
     plt.savefig(os.path.join(output_place, "residuals.png"), bbox_inches='tight')
+=======
+The following script downloads the data (13 MB), runs the PSF subtraction with PynPoint, and plots an image of the median-collapsed residuals:
+
+.. code-block:: python
+
+   import os
+   import urllib
+   import matplotlib.pyplot as plt
+
+   from pynpoint import Pypeline, \
+                        Hdf5ReadingModule, \
+                        PSFpreparationModule, \
+                        PcaPsfSubtractionModule
+
+   working_place = '/path/to/working_place/'
+   input_place = '/path/to/input_place/'
+   output_place = '/path/to/output_place/'
+
+   data_url = 'https://people.phys.ethz.ch/~stolkert/pynpoint/betapic_naco_mp.hdf5'
+   data_loc = os.path.join(input_place, 'betapic_naco_mp.hdf5')
+
+   urllib.request.urlretrieve(data_url, data_loc)
+
+   pipeline = Pypeline(working_place_in=working_place,
+                       input_place_in=input_place,
+                       output_place_in=output_place)
+
+   module = Hdf5ReadingModule(name_in='read',
+                              input_filename='betapic_naco_mp.hdf5',
+                              input_dir=None,
+                              tag_dictionary={'stack': 'stack'})
+
+   pipeline.add_module(module)
+
+   module = PSFpreparationModule(name_in='prep',
+                                 image_in_tag='stack',
+                                 image_out_tag='prep',
+                                 mask_out_tag=None,
+                                 norm=False,
+                                 resize=None,
+                                 cent_size=0.15,
+                                 edge_size=1.1)
+
+   pipeline.add_module(module)
+
+   module = PcaPsfSubtractionModule(pca_numbers=[20, ],
+                                    name_in='pca',
+                                    images_in_tag='prep',
+                                    reference_in_tag='prep',
+                                    res_median_tag='residuals')
+
+   pipeline.add_module(module)
+
+   pipeline.run()
+
+   residuals = pipeline.get_data('residuals')
+   pixscale = pipeline.get_attribute('stack', 'PIXSCALE')
+
+   size = pixscale*residuals.shape[-1]/2.
+
+   plt.imshow(residuals[0, ], origin='lower', extent=[size, -size, -size, size])
+   plt.title('beta Pic b - NACO M\' - median residuals')
+   plt.xlabel('R.A. offset [arcsec]', fontsize=12)
+   plt.ylabel('Dec. offset [arcsec]', fontsize=12)
+   plt.colorbar()
+   plt.savefig(os.path.join(output_place, 'residuals.png'), bbox_inches='tight')
+>>>>>>> upstream/master
 
 .. |id| raw:: html
 

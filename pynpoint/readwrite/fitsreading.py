@@ -3,7 +3,10 @@ Module for reading FITS files.
 """
 
 import os
+<<<<<<< HEAD
 import sys
+=======
+>>>>>>> upstream/master
 import time
 
 from typing import Union, Tuple, List
@@ -29,6 +32,11 @@ class FitsReadingModule(ReadingModule):
     in the central database.
     """
 
+<<<<<<< HEAD
+=======
+    __author__ = 'Markus Bonse, Tomas Stolker'
+
+>>>>>>> upstream/master
     @typechecked
     def __init__(self,
                  name_in: str,
@@ -161,7 +169,11 @@ class FitsReadingModule(ReadingModule):
 
         if isinstance(self.m_filenames, str):
             files = self._txt_file_list()
+<<<<<<< HEAD
             
+=======
+
+>>>>>>> upstream/master
             for item in files:
                 if not os.path.isfile(item):
                     raise ValueError(f'The file {item} does not exist. Please check that the '
@@ -189,12 +201,20 @@ class FitsReadingModule(ReadingModule):
 
         start_time = time.time()
         for i, fits_file in enumerate(files):
+<<<<<<< HEAD
             progress(i, len(files), 'Running FitsReadingModule...', start_time)
+=======
+            progress(i, len(files), 'Reading FITS files...', start_time)
+>>>>>>> upstream/master
 
             header, shape = self.read_single_file(fits_file, overwrite_tags)
 
             if len(shape) == 2:
                 nimages = 1
+<<<<<<< HEAD
+=======
+
+>>>>>>> upstream/master
             elif len(shape) == 3:
                 nimages = shape[0]
 
@@ -219,7 +239,10 @@ class FitsReadingModule(ReadingModule):
 
             self.m_image_out_port.flush()
 
+<<<<<<< HEAD
         sys.stdout.write('Running FitsReadingModule... [DONE]\n')
         sys.stdout.flush()
 
+=======
+>>>>>>> upstream/master
         self.m_image_out_port.close_port()

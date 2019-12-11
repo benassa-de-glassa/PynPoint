@@ -2,7 +2,10 @@
 Pipeline modules for basic image operations.
 """
 
+<<<<<<< HEAD
 import sys
+=======
+>>>>>>> upstream/master
 import time
 
 from typing import Tuple
@@ -78,16 +81,23 @@ class SubtractImagesModule(ProcessingModule):
         start_time = time.time()
 
         for i, _ in enumerate(frames[:-1]):
+<<<<<<< HEAD
             progress(i, len(frames[:-1]), 'Running SubtractImagesModule...', start_time)
+=======
+            progress(i, len(frames[:-1]), 'Subtracting images...', start_time)
+>>>>>>> upstream/master
 
             images1 = self.m_image_in1_port[frames[i]:frames[i+1], ]
             images2 = self.m_image_in2_port[frames[i]:frames[i+1], ]
 
             self.m_image_out_port.append(self.m_scaling*(images1-images2), data_dim=3)
 
+<<<<<<< HEAD
         sys.stdout.write('Running SubtractImagesModule... [DONE]\n')
         sys.stdout.flush()
 
+=======
+>>>>>>> upstream/master
         history = f'scaling = {self.m_scaling}'
         self.m_image_out_port.add_history('SubtractImagesModule', history)
         self.m_image_out_port.copy_attributes(self.m_image_in1_port)
@@ -158,16 +168,23 @@ class AddImagesModule(ProcessingModule):
         start_time = time.time()
 
         for i, _ in enumerate(frames[:-1]):
+<<<<<<< HEAD
             progress(i, len(frames[:-1]), 'Running AddImagesModule...', start_time)
+=======
+            progress(i, len(frames[:-1]), 'Adding images...', start_time)
+>>>>>>> upstream/master
 
             images1 = self.m_image_in1_port[frames[i]:frames[i+1], ]
             images2 = self.m_image_in2_port[frames[i]:frames[i+1], ]
 
             self.m_image_out_port.append(self.m_scaling*(images1+images2), data_dim=3)
 
+<<<<<<< HEAD
         sys.stdout.write('Running AddImagesModule... [DONE]\n')
         sys.stdout.flush()
 
+=======
+>>>>>>> upstream/master
         history = f'scaling = {self.m_scaling}'
         self.m_image_out_port.add_history('AddImagesModule', history)
         self.m_image_out_port.copy_attributes(self.m_image_in1_port)
@@ -231,7 +248,11 @@ class RotateImagesModule(ProcessingModule):
         start_time = time.time()
 
         for i, _ in enumerate(frames[:-1]):
+<<<<<<< HEAD
             progress(i, len(frames[:-1]), 'Running RotateImagesModule...', start_time)
+=======
+            progress(i, len(frames[:-1]), 'Rotating images...', start_time)
+>>>>>>> upstream/master
 
             images = self.m_image_in_port[frames[i]:frames[i+1], ]
 
@@ -243,9 +264,12 @@ class RotateImagesModule(ProcessingModule):
 
                 self.m_image_out_port.append(im_tmp, data_dim=3)
 
+<<<<<<< HEAD
         sys.stdout.write('Running RotateImagesModule... [DONE]\n')
         sys.stdout.flush()
 
+=======
+>>>>>>> upstream/master
         history = f'angle [deg] = {self.m_angle}'
         self.m_image_out_port.add_history('RotateImagesModule', history)
         self.m_image_out_port.copy_attributes(self.m_image_in_port)
@@ -312,15 +336,22 @@ class RepeatImagesModule(ProcessingModule):
         start_time = time.time()
 
         for i in range(self.m_repeat):
+<<<<<<< HEAD
             progress(i, self.m_repeat, 'Running RepeatImagesModule...', start_time)
+=======
+            progress(i, self.m_repeat, 'Repeating images...', start_time)
+>>>>>>> upstream/master
 
             for j, _ in enumerate(frames[:-1]):
                 images = self.m_image_in_port[frames[j]:frames[j+1], ]
                 self.m_image_out_port.append(images, data_dim=3)
 
+<<<<<<< HEAD
         sys.stdout.write('Running RepeatImagesModule... [DONE]\n')
         sys.stdout.flush()
 
+=======
+>>>>>>> upstream/master
         history = f'repeat = {self.m_repeat}'
         self.m_image_out_port.add_history('RepeatImagesModule', history)
         self.m_image_out_port.copy_attributes(self.m_image_in_port)

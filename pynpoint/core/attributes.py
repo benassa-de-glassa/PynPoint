@@ -86,8 +86,13 @@ def get_attributes():
                     'value': 'DEC',
                     'type': 'float'},
             'PARANG': {'attribute': 'non-static',
+<<<<<<< HEAD
                        'config': None,
                        'value': None,
+=======
+                       'config': 'header',
+                       'value': 'None',
+>>>>>>> upstream/master
                        'type': 'float'},
             'STAR_POSITION': {'attribute': 'non-static',
                               'config': None,

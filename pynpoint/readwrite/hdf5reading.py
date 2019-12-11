@@ -4,7 +4,10 @@ Module for reading HDF5 files that were created with the
 """
 
 import os
+<<<<<<< HEAD
 import sys
+=======
+>>>>>>> upstream/master
 import time
 import warnings
 
@@ -27,6 +30,11 @@ class Hdf5ReadingModule(ReadingModule):
     may lead to inconsistencies in the central database.
     """
 
+<<<<<<< HEAD
+=======
+    __author__ = 'Markus Bonse, Tomas Stolker'
+
+>>>>>>> upstream/master
     @typechecked
     def __init__(self,
                  name_in: str,
@@ -143,8 +151,13 @@ class Hdf5ReadingModule(ReadingModule):
 
         start_time = time.time()
         for i, tmp_file in enumerate(files):
+<<<<<<< HEAD
             progress(i, len(files), 'Running Hdf5ReadingModule...', start_time)
             self.read_single_hdf5(tmp_file)
 
         sys.stdout.write('Running Hdf5ReadingModule... [DONE]\n')
         sys.stdout.flush()
+=======
+            progress(i, len(files), 'Reading HDF5 file...', start_time)
+            self.read_single_hdf5(tmp_file)
+>>>>>>> upstream/master

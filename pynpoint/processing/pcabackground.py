@@ -2,7 +2,10 @@
 Pipeline modules for PCA-based background subtraction.
 """
 
+<<<<<<< HEAD
 import sys
+=======
+>>>>>>> upstream/master
 import time
 import math
 import warnings
@@ -19,8 +22,13 @@ from pynpoint.core.processing import ProcessingModule
 from pynpoint.processing.resizing import CropImagesModule
 from pynpoint.processing.stacksubset import CombineTagsModule
 from pynpoint.processing.psfpreparation import SortParangModule
+<<<<<<< HEAD
 from pynpoint.util.image import locate_star
 from pynpoint.util.module import progress, memory_frames
+=======
+from pynpoint.util.module import progress, memory_frames
+from pynpoint.util.star import locate_star
+>>>>>>> upstream/master
 
 
 class PCABackgroundPreparationModule(ProcessingModule):
@@ -188,7 +196,11 @@ class PCABackgroundPreparationModule(ProcessingModule):
 
         start_time = time.time()
         for i, item in enumerate(nframes):
+<<<<<<< HEAD
             progress(i, len(nframes), 'Running PCABackgroundPreparationModule...', start_time)
+=======
+            progress(i, len(nframes), 'Preparing PCA background subtraction...', start_time)
+>>>>>>> upstream/master
 
             im_tmp = self.m_image_in_port[count:count+item, ]
 
@@ -255,9 +267,12 @@ class PCABackgroundPreparationModule(ProcessingModule):
         star_index, star_parang, star_nframes, background_index, background_parang, \
             background_nframes = self._separate(bg_frames, bg_indices, parang, cube_mean)
 
+<<<<<<< HEAD
         sys.stdout.write('Running PCABackgroundPreparationModule... [DONE]\n')
         sys.stdout.flush()
 
+=======
+>>>>>>> upstream/master
         history = f'frames = {sum(star_nframes)}, {len(background_nframes)}'
 
         self.m_star_out_port.copy_attributes(self.m_image_in_port)
@@ -491,15 +506,23 @@ class PCABackgroundSubtractionModule(ProcessingModule):
                                      width=self.m_subframe,
                                      fwhm=self.m_gaussian)
 
+<<<<<<< HEAD
         sys.stdout.write('Creating PCA basis set...')
         sys.stdout.flush()
+=======
+        print('Creating PCA basis set...', end='')
+>>>>>>> upstream/master
 
         basis_pca = _create_basis(self.m_background_in_port.get_all(),
                                   bg_mean,
                                   self.m_pca_number)
 
+<<<<<<< HEAD
         sys.stdout.write(' [DONE]\n')
         sys.stdout.flush()
+=======
+        print(' [DONE]')
+>>>>>>> upstream/master
 
         start_time = time.time()
         for i, _ in enumerate(frames[:-1]):
@@ -524,9 +547,12 @@ class PCABackgroundSubtractionModule(ProcessingModule):
             if self.m_mask_out_port is not None:
                 self.m_mask_out_port.append(mask)
 
+<<<<<<< HEAD
         sys.stdout.write('Calculating background model... [DONE]\n')
         sys.stdout.flush()
 
+=======
+>>>>>>> upstream/master
         history = f'PC number = {self.m_pca_number}'
         self.m_residuals_out_port.copy_attributes(self.m_star_in_port)
         self.m_residuals_out_port.add_history('PCABackgroundSubtractionModule', history)
@@ -720,9 +746,12 @@ class DitheringBackgroundModule(ProcessingModule):
             elif self.m_combine == 'pca':
                 tags.append(self.m_image_in_tag+'_dither_pca_res'+str(count+1))
 
+<<<<<<< HEAD
             if self.m_crop or self.m_prepare or self.m_pca_background:
                 print(f'Processing dither position {count+1} out of {n_dither}... [DONE]')
 
+=======
+>>>>>>> upstream/master
         n_dither, star_pos = self._initialize()
         tags = []
 

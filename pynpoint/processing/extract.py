@@ -12,7 +12,12 @@ import numpy as np
 from typeguard import typechecked
 
 from pynpoint.core.processing import ProcessingModule
+<<<<<<< HEAD
 from pynpoint.util.image import crop_image, center_pixel, locate_star, rotate_coordinates
+=======
+from pynpoint.util.image import crop_image, center_pixel, rotate_coordinates
+from pynpoint.util.star import locate_star
+>>>>>>> upstream/master
 
 
 class StarExtractionModule(ProcessingModule):
@@ -152,7 +157,11 @@ class StarExtractionModule(ProcessingModule):
         self.apply_function_to_images(_crop_around_star,
                                       self.m_image_in_port,
                                       self.m_image_out_port,
+<<<<<<< HEAD
                                       'Running StarExtractionModule',
+=======
+                                      'Extracting stellar position',
+>>>>>>> upstream/master
                                       func_args=(self.m_position,
                                                  self.m_image_size,
                                                  self.m_fwhm_star))
@@ -279,7 +288,11 @@ class ExtractBinaryModule(ProcessingModule):
         self.apply_function_to_images(_crop_rotating_star,
                                       self.m_image_in_port,
                                       self.m_image_out_port,
+<<<<<<< HEAD
                                       'Running ExtractBinaryModule',
+=======
+                                      'Extracting binary position',
+>>>>>>> upstream/master
                                       func_args=(positions,
                                                  self.m_image_size,
                                                  self.m_filter_size))

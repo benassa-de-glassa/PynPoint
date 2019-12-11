@@ -2,7 +2,10 @@
 Pipeline modules for subtraction of the background emission.
 """
 
+<<<<<<< HEAD
 import sys
+=======
+>>>>>>> upstream/master
 import time
 import warnings
 
@@ -74,9 +77,17 @@ class SimpleBackgroundSubtractionModule(ProcessingModule):
             self.m_image_out_port[0] = subtract
         else:
             self.m_image_out_port.set_all(subtract, data_dim=3)
+<<<<<<< HEAD
         start_time = time.time()
         for i in range(1, nframes):
             progress(i, nframes, 'Running SimpleBackgroundSubtractionModule...', start_time)
+=======
+
+        start_time = time.time()
+
+        for i in range(1, nframes):
+            progress(i, nframes, 'Subtracting background...', start_time)
+>>>>>>> upstream/master
 
             subtract = self.m_image_in_port[i] - self.m_image_in_port[(i + self.m_shift) % nframes]
 
@@ -85,9 +96,12 @@ class SimpleBackgroundSubtractionModule(ProcessingModule):
             else:
                 self.m_image_out_port.append(subtract)
 
+<<<<<<< HEAD
         sys.stdout.write('Running SimpleBackgroundSubtractionModule... [DONE]\n')
         sys.stdout.flush()
 
+=======
+>>>>>>> upstream/master
         history = f'shift = {self.m_shift}'
         self.m_image_out_port.copy_attributes(self.m_image_in_port)
         self.m_image_out_port.add_history('SimpleBackgroundSubtractionModule', history)
@@ -205,7 +219,11 @@ class MeanBackgroundSubtractionModule(ProcessingModule):
         start_time = time.time()
         if isinstance(self.m_shift, np.ndarray):
             for i in range(self.m_cubes, nstacks, self.m_cubes):
+<<<<<<< HEAD
                 progress(i, nstacks, 'Running MeanBackgroundSubtractionModule...', start_time)
+=======
+                progress(i, nstacks, 'Subtracting background...', start_time)
+>>>>>>> upstream/master
 
                 prev_start = np.sum(self.m_shift[0:i-self.m_cubes])
                 prev_end = np.sum(self.m_shift[0:i])
@@ -232,7 +250,11 @@ class MeanBackgroundSubtractionModule(ProcessingModule):
             top = int(np.ceil(nframes/self.m_shift)) - 2
 
             for i in range(1, top, 1):
+<<<<<<< HEAD
                 progress(i, top, 'Running MeanBackgroundSubtractionModule...', start_time)
+=======
+                progress(i, top, 'Subtracting background...', start_time)
+>>>>>>> upstream/master
 
                 # calc the mean (next)
                 tmp_data = self.m_image_in_port[(i+1)*self.m_shift:(i+2)*self.m_shift, ]
@@ -274,9 +296,12 @@ class MeanBackgroundSubtractionModule(ProcessingModule):
             self.m_image_out_port.append(tmp_data)
             # -----------------------------------------------------------
 
+<<<<<<< HEAD
         sys.stdout.write('Running MeanBackgroundSubtractionModule... [DONE]\n')
         sys.stdout.flush()
 
+=======
+>>>>>>> upstream/master
         if isinstance(self.m_shift, np.ndarray):
             history = f'shift = NFRAMES'
         else:
@@ -387,7 +412,11 @@ class LineSubtractionModule(ProcessingModule):
         self.apply_function_to_images(_subtract_line,
                                       self.m_image_in_port,
                                       self.m_image_out_port,
+<<<<<<< HEAD
                                       'Running LineSubtractionModule',
+=======
+                                      'Background subtraction',
+>>>>>>> upstream/master
                                       func_args=(mask, ))
 
         history = f'combine = {self.m_combine}'
@@ -553,7 +582,11 @@ class NoddingBackgroundModule(ProcessingModule):
 
         start_time = time.time()
         for i, time_entry in enumerate(self.m_time_stamps):
+<<<<<<< HEAD
             progress(i, len(self.m_time_stamps), 'Running NoddingBackgroundModule...', start_time)
+=======
+            progress(i, len(self.m_time_stamps), 'Subtracting background...', start_time)
+>>>>>>> upstream/master
 
             if time_entry.m_im_type == 'SKY':
                 continue
@@ -563,9 +596,12 @@ class NoddingBackgroundModule(ProcessingModule):
 
             self.m_image_out_port.append(science - sky[None, ], data_dim=3)
 
+<<<<<<< HEAD
         sys.stdout.write('Running NoddingBackgroundModule... [DONE]\n')
         sys.stdout.flush()
 
+=======
+>>>>>>> upstream/master
         history = f'mode = {self.m_mode}'
         self.m_image_out_port.copy_attributes(self.m_science_in_port)
         self.m_image_out_port.add_history('NoddingBackgroundModule', history)

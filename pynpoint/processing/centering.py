@@ -2,7 +2,10 @@
 Pipeline modules for aligning and centering of the star.
 """
 
+<<<<<<< HEAD
 import sys
+=======
+>>>>>>> upstream/master
 import time
 import math
 import warnings
@@ -172,13 +175,23 @@ class StarAlignmentModule(ProcessingModule):
         self.apply_function_to_images(_align_image,
                                       self.m_image_in_port,
                                       self.m_image_out_port,
+<<<<<<< HEAD
                                       'Running StarAlignmentModule')
+=======
+                                      'Aligning images')
+>>>>>>> upstream/master
 
         self.m_image_out_port.copy_attributes(self.m_image_in_port)
 
         if self.m_resize is not None:
             pixscale = self.m_image_in_port.get_attribute('PIXSCALE')
+<<<<<<< HEAD
             self.m_image_out_port.add_attribute('PIXSCALE', pixscale/self.m_resize)
+=======
+            new_pixscale = pixscale/self.m_resize
+            self.m_image_out_port.add_attribute('PIXSCALE', new_pixscale)
+            print(f'New pixel scale [arcsec] = {new_pixscale:.2f}')
+>>>>>>> upstream/master
 
         history = f'resize = {self.m_resize}'
         self.m_image_out_port.add_history('StarAlignmentModule', history)
@@ -387,7 +400,11 @@ class FitCenterModule(ProcessingModule):
             c_gauss = 0.5 * ((np.sin(theta)/sigma_x)**2 + (np.cos(theta)/sigma_y)**2)
 
             gaussian = offset + amp*np.exp(-(a_gauss*x_diff**2 + b_gauss*x_diff*y_diff +
+<<<<<<< HEAD
                                            c_gauss*y_diff**2))
+=======
+                                             c_gauss*y_diff**2))
+>>>>>>> upstream/master
 
             if self.m_radius:
                 gaussian = gaussian[rr_ap < self.m_radius]
@@ -551,11 +568,18 @@ class FitCenterModule(ProcessingModule):
             self.apply_function_to_images(_fit_2d_function,
                                           self.m_image_in_port,
                                           self.m_fit_out_port,
+<<<<<<< HEAD
                                           'Running FitCenterModule')
 
         elif self.m_method == 'mean':
             sys.stdout.write("Running FitCenterModule...")
             sys.stdout.flush()
+=======
+                                          'Fitting the stellar PSF')
+
+        elif self.m_method == 'mean':
+            print('Fitting the stellar PSF...', end='')
+>>>>>>> upstream/master
 
             im_mean = np.zeros(self.m_image_in_port.get_shape()[1:3])
 
@@ -568,8 +592,12 @@ class FitCenterModule(ProcessingModule):
 
             self.m_fit_out_port.set_all(best_fit, data_dim=2)
 
+<<<<<<< HEAD
             sys.stdout.write(" [DONE]\n")
             sys.stdout.flush()
+=======
+            print(' [DONE]')
+>>>>>>> upstream/master
 
         if self.m_count > 0:
             print(f'Fit could not converge on {self.m_count} image(s). [WARNING]')
@@ -652,7 +680,10 @@ class ShiftImagesModule(ProcessingModule):
         self.m_image_out_port.del_all_attributes()
         self.m_image_out_port.del_all_data()
 
+<<<<<<< HEAD
         # set the 'constant' flag to true
+=======
+>>>>>>> upstream/master
         constant = True
 
         # read the fit results from the self.m_fit_in_port if available
@@ -663,9 +694,14 @@ class ShiftImagesModule(ProcessingModule):
 
             # check if data in self.m_fit_in_port is constant for all images using the
             # constant flag
+<<<<<<< HEAD
             for i in range(self.m_fit_in_port.get_shape()[0]):
                 if not np.allclose(self.m_fit_in_port[0, ], self.m_fit_in_port[i, ]):
                     constant = False
+=======
+            if not np.allclose(self.m_fit_in_port.get_all() - self.m_fit_in_port[0, ], 0.0):
+                constant = False
+>>>>>>> upstream/master
 
             if constant:
                 # if the offset is constant then use the first element for all images
@@ -687,6 +723,7 @@ class ShiftImagesModule(ProcessingModule):
         # apply a constant shift
         if constant:
 
+<<<<<<< HEAD
             # get memory from config tag
             memory = self._m_config_port.get_attribute('MEMORY')
 
@@ -711,6 +748,13 @@ class ShiftImagesModule(ProcessingModule):
 
                 # write out the progress
                 progress(i, len(frames[:-1]), 'Running ShiftImagesModule...', start_time)
+=======
+            self.apply_function_to_images(shift_image,
+                                          self.m_image_in_port,
+                                          self.m_image_out_port,
+                                          'Shifting the images',
+                                          func_args=(self.m_shift, self.m_interpolation))
+>>>>>>> upstream/master
 
             # if self.m_fit_in_port is None or constant:
             history = f'shift_xy = {self.m_shift[0]:.2f}, {self.m_shift[1]:.2f}'
@@ -734,7 +778,11 @@ class WaffleCenteringModule(ProcessingModule):
                  image_in_tag: str,
                  center_in_tag: str,
                  image_out_tag: str,
+<<<<<<< HEAD
                  size: float = 2.,
+=======
+                 size: float = None,
+>>>>>>> upstream/master
                  center: Tuple[float, float] = None,
                  radius: float = 45.,
                  pattern: str = 'x',
@@ -752,7 +800,11 @@ class WaffleCenteringModule(ProcessingModule):
         image_out_tag : str
             Tag of the database entry with the centered images that are written as output. Should
             be different from *image_in_tag*.
+<<<<<<< HEAD
         size : float
+=======
+        size : float, None
+>>>>>>> upstream/master
             Image size (arcsec) for both dimensions. Original image size is used if set to None.
         center : tuple(float, float), None
             Approximate position (x0, y0) of the coronagraph. The center of the image is used if
@@ -935,8 +987,13 @@ class WaffleCenteringModule(ProcessingModule):
 
         x_center = ((y_pos[0]-x_pos[0]*(y_pos[2]-y_pos[0])/(x_pos[2]-float(x_pos[0]))) -
                     (y_pos[1]-x_pos[1]*(y_pos[1]-y_pos[3])/(x_pos[1]-float(x_pos[3])))) / \
+<<<<<<< HEAD
             ((y_pos[1]-y_pos[3])/(x_pos[1]-float(x_pos[3])) -
                 (y_pos[2]-y_pos[0])/(x_pos[2]-float(x_pos[0])))
+=======
+                   ((y_pos[1]-y_pos[3])/(x_pos[1]-float(x_pos[3])) -
+                    (y_pos[2]-y_pos[0])/(x_pos[2]-float(x_pos[0])))
+>>>>>>> upstream/master
 
         y_center = x_center*(y_pos[1]-y_pos[3])/(x_pos[1]-float(x_pos[3])) + \
             (y_pos[1]-x_pos[1]*(y_pos[1]-y_pos[3])/(x_pos[1]-float(x_pos[3])))
@@ -946,7 +1003,11 @@ class WaffleCenteringModule(ProcessingModule):
 
         start_time = time.time()
         for i in range(nimages):
+<<<<<<< HEAD
             progress(i, nimages, 'Running WaffleCenteringModule...', start_time)
+=======
+            progress(i, nimages, 'Centering the images...', start_time)
+>>>>>>> upstream/master
 
             image = self.m_image_in_port[i, ]
 
@@ -975,9 +1036,13 @@ class WaffleCenteringModule(ProcessingModule):
             else:
                 self.m_image_out_port.append(im_shift, data_dim=3)
 
+<<<<<<< HEAD
         sys.stdout.write('Running WaffleCenteringModule... [DONE]\n')
         sys.stdout.write('Center [x, y] = ['+str(x_center)+', '+str(y_center)+']\n')
         sys.stdout.flush()
+=======
+        print(f'Center [x, y] = [{x_center}, {y_center}]')
+>>>>>>> upstream/master
 
         history = f'[x, y] = [{round(x_center, 2)}, {round(y_center, 2)}]'
         self.m_image_out_port.copy_attributes(self.m_image_in_port)

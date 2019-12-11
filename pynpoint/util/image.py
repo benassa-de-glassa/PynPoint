@@ -6,7 +6,10 @@ import math
 
 from typing import Union, Tuple
 
+<<<<<<< HEAD
 import cv2
+=======
+>>>>>>> upstream/master
 import numpy as np
 
 from typeguard import typechecked
@@ -476,6 +479,7 @@ def select_annulus(image_in: np.ndarray,
 
 
 @typechecked
+<<<<<<< HEAD
 def locate_star(image: np.ndarray,
                 center: Union[tuple, None],
                 width: Union[int, None],
@@ -525,6 +529,8 @@ def locate_star(image: np.ndarray,
 
 
 @typechecked
+=======
+>>>>>>> upstream/master
 def rotate_coordinates(center: Tuple[float, float],
                        position: Tuple[float, float],
                        angle: float) -> Tuple[float, float]:

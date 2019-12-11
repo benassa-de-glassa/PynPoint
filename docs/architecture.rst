@@ -56,7 +56,13 @@ In order to create a valid data reduction cascade, one should check that the req
 Pypeline
 --------
 
+<<<<<<< HEAD
 The :class:`~pynpoint.core.pypeline` module is the central component which manages the order and execution of the different pipeline modules. Each :class:`~pynpoint.core.pypeline.Pypeline` instance has an ``working_place_in`` path which is where the central database and configuration file are stored, an ``input_place_in`` path which is the default data location for reading modules, and an ``output_place_in`` path which is the default output path where the data will be saved by the writing modules: ::
+=======
+The :class:`~pynpoint.core.pypeline` module is the central component which manages the order and execution of the different pipeline modules. Each :class:`~pynpoint.core.pypeline.Pypeline` instance has an ``working_place_in`` path which is where the central database and configuration file are stored, an ``input_place_in`` path which is the default data location for reading modules, and an ``output_place_in`` path which is the default output path where the data will be saved by the writing modules:
+
+.. code-block:: python
+>>>>>>> upstream/master
 
     from pynpoint import Pypeline, FitsReadingModule
 
@@ -64,6 +70,7 @@ The :class:`~pynpoint.core.pypeline` module is the central component which manag
                         input_place_in="/path/to/input_place",
                         output_place_in="/path/to/output_place")
 
+<<<<<<< HEAD
 A pipeline module is created from any of the classes listed in the :ref:`overview` section, for example::
 
     module = FitsReadingModule(name_in="read", image_tag="input")
@@ -85,6 +92,41 @@ Running all modules attached to the pipeline is achieved with: ::
     pipeline.run()
 
 Or a single module is executed as: ::
+=======
+A pipeline module is created from any of the classes listed in the :ref:`overview` section, for example:
+
+.. code-block:: python
+
+    module = FitsReadingModule(name_in="read", image_tag="input")
+
+The module is appended to the pipeline queue as:
+
+.. code-block:: python
+
+    pipeline.add_module(module)
+
+And can be removed from the queue with the following method:
+
+.. code-block:: python
+
+    pipeline.remove_module("read")
+
+The names and order of the pipeline modules can be listed with:
+
+.. code-block:: python
+
+    pipeline.get_module_names()
+
+Running all modules attached to the pipeline is achieved with:
+
+.. code-block:: python
+
+    pipeline.run()
+
+Or a single module is executed as:
+
+.. code-block:: python
+>>>>>>> upstream/master
 
     pipeline.run_module("read")
 

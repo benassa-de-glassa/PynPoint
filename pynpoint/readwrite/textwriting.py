@@ -3,7 +3,10 @@ Modules for writing data as text file.
 """
 
 import os
+<<<<<<< HEAD
 import sys
+=======
+>>>>>>> upstream/master
 
 import numpy as np
 
@@ -19,6 +22,11 @@ class TextWritingModule(WritingModule):
     the use of the Pypeline default output directory as well as a specified location.
     """
 
+<<<<<<< HEAD
+=======
+    __author__ = 'Tomas Stolker'
+
+>>>>>>> upstream/master
     @typechecked
     def __init__(self,
                  name_in: str,
@@ -68,8 +76,12 @@ class TextWritingModule(WritingModule):
         if self.m_header is None:
             self.m_header = ''
 
+<<<<<<< HEAD
         sys.stdout.write('Running TextWritingModule...')
         sys.stdout.flush()
+=======
+        print('Writing text file...', end='')
+>>>>>>> upstream/master
 
         out_name = os.path.join(self.m_output_location, self.m_file_name)
 
@@ -87,8 +99,12 @@ class TextWritingModule(WritingModule):
         elif data.dtype == 'float32' or data.dtype == 'float64':
             np.savetxt(out_name, data, header=self.m_header, comments='# ')
 
+<<<<<<< HEAD
         sys.stdout.write(' [DONE]\n')
         sys.stdout.flush()
+=======
+        print(' [DONE]')
+>>>>>>> upstream/master
 
         self.m_data_port.close_port()
 
@@ -98,6 +114,11 @@ class ParangWritingModule(WritingModule):
     Module for writing a list of parallactic angles to a text file.
     """
 
+<<<<<<< HEAD
+=======
+    __author__ = 'Tomas Stolker'
+
+>>>>>>> upstream/master
     @typechecked
     def __init__(self,
                  name_in: str,
@@ -145,8 +166,12 @@ class ParangWritingModule(WritingModule):
             None
         """
 
+<<<<<<< HEAD
         sys.stdout.write('Running ParangWritingModule...')
         sys.stdout.flush()
+=======
+        print('Writing parallactic angles...', end='')
+>>>>>>> upstream/master
 
         if self.m_header is None:
             self.m_header = ''
@@ -160,8 +185,12 @@ class ParangWritingModule(WritingModule):
 
         np.savetxt(out_name, parang, header=self.m_header, comments='# ')
 
+<<<<<<< HEAD
         sys.stdout.write(' [DONE]\n')
         sys.stdout.flush()
+=======
+        print(' [DONE]')
+>>>>>>> upstream/master
 
         self.m_data_port.close_port()
 
@@ -171,6 +200,11 @@ class AttributeWritingModule(WritingModule):
     Module for writing a 1D or 2D array of non-static attributes to a text file.
     """
 
+<<<<<<< HEAD
+=======
+    __author__ = 'Tomas Stolker'
+
+>>>>>>> upstream/master
     @typechecked
     def __init__(self,
                  name_in: str,
@@ -225,8 +259,12 @@ class AttributeWritingModule(WritingModule):
         if self.m_header is None:
             self.m_header = ''
 
+<<<<<<< HEAD
         sys.stdout.write('Running AttributeWritingModule...')
         sys.stdout.flush()
+=======
+        print('Writing attribute data...', end='')
+>>>>>>> upstream/master
 
         out_name = os.path.join(self.m_output_location, self.m_file_name)
 
@@ -238,7 +276,11 @@ class AttributeWritingModule(WritingModule):
 
         np.savetxt(out_name, values, header=self.m_header, comments='# ')
 
+<<<<<<< HEAD
         sys.stdout.write(' [DONE]\n')
         sys.stdout.flush()
+=======
+        print(' [DONE]')
+>>>>>>> upstream/master
 
         self.m_data_port.close_port()

@@ -6,7 +6,12 @@ import sys
 import time
 import warnings
 
+<<<<<<< HEAD
 from typing import Union, Tuple
+=======
+from typing import Union, Tuple, List
+from multiprocessing import Pool
+>>>>>>> upstream/master
 
 import numpy as np
 import emcee
@@ -129,7 +134,11 @@ class FakePlanetModule(ProcessingModule):
 
         start_time = time.time()
         for j, _ in enumerate(frames[:-1]):
+<<<<<<< HEAD
             progress(j, len(frames[:-1]), 'Running FakePlanetModule...', start_time)
+=======
+            progress(j, len(frames[:-1]), 'Injecting artificial planets...', start_time)
+>>>>>>> upstream/master
 
             images = self.m_image_in_port[frames[j]:frames[j+1]]
             angles = parang[frames[j]:frames[j+1]]
@@ -149,9 +158,12 @@ class FakePlanetModule(ProcessingModule):
 
             self.m_image_out_port.append(im_fake, data_dim=3)
 
+<<<<<<< HEAD
         sys.stdout.write('Running FakePlanetModule... [DONE]\n')
         sys.stdout.flush()
 
+=======
+>>>>>>> upstream/master
         history = f'(sep, angle, mag) = ({self.m_position[0]*pixscale:.2f}, ' \
                   f'{self.m_position[1]:.2f}, {self.m_magnitude:.2f})'
 
@@ -182,7 +194,11 @@ class SimplexMinimizationModule(ProcessingModule):
                  aperture: float = 0.1,
                  sigma: float = 0.0,
                  tolerance: float = 0.1,
+<<<<<<< HEAD
                  pca_number: int = 20,
+=======
+                 pca_number: Union[int, range, List[int]] = 10,
+>>>>>>> upstream/master
                  cent_size: float = None,
                  edge_size: float = None,
                  extra_rot: float = 0.,
@@ -233,6 +249,7 @@ class SimplexMinimizationModule(ProcessingModule):
             which is used for both the position and flux so tolerance=0.1 will give a precision of
             0.1 mag and 0.1 pix. The tolerance on the output (i.e., the chi-square value) is set to
             np.inf so the condition is always met.
+<<<<<<< HEAD
         pca_number : int
             Number of principal components used for the PSF subtraction.
         cent_size : float
@@ -241,6 +258,19 @@ class SimplexMinimizationModule(ProcessingModule):
             Outer radius (arcsec) beyond which pixels are masked. No outer mask is used when set to
             None. The radius will be set to half the image size if the argument is larger than half
             the image size.
+=======
+        pca_number : int, range, list(int, )
+            Number of principal components (PCs) used for the PSF subtraction. Can be either a
+            single value or a range/list of values. In the latter case, the `res_out_tag` and
+            `flux_position_tag` contain a 3 digit number with the number of PCs.
+        cent_size : float
+            Radius of the central mask (arcsec). No mask is used when set to None. Masking is done
+            after the artificial planet is injected.
+        edge_size : float
+            Outer radius (arcsec) beyond which pixels are masked. No outer mask is used when set to
+            None. The radius will be set to half the image size if the argument is larger than half
+            the image size. Masking is done after the artificial planet is injected.
+>>>>>>> upstream/master
         extra_rot : float
             Additional rotation angle of the images in clockwise direction (deg).
         residuals : str
@@ -272,8 +302,22 @@ class SimplexMinimizationModule(ProcessingModule):
         else:
             self.m_reference_in_port = self.add_input_port(reference_in_tag)
 
+<<<<<<< HEAD
         self.m_res_out_port = self.add_output_port(res_out_tag)
         self.m_flux_position_port = self.add_output_port(flux_position_tag)
+=======
+        self.m_res_out_port = []
+        self.m_flux_pos_port = []
+
+        if isinstance(pca_number, int):
+            self.m_res_out_port.append(self.add_output_port(res_out_tag))
+            self.m_flux_pos_port.append(self.add_output_port(flux_position_tag))
+
+        else:
+            for item in pca_number:
+                self.m_res_out_port.append(self.add_output_port(res_out_tag+f'{item:03d}'))
+                self.m_flux_pos_port.append(self.add_output_port(flux_position_tag+f'{item:03d}'))
+>>>>>>> upstream/master
 
         self.m_position = position
         self.m_magnitude = magnitude
@@ -282,12 +326,23 @@ class SimplexMinimizationModule(ProcessingModule):
         self.m_aperture = aperture
         self.m_sigma = sigma
         self.m_tolerance = tolerance
+<<<<<<< HEAD
         self.m_pca_number = pca_number
+=======
+>>>>>>> upstream/master
         self.m_cent_size = cent_size
         self.m_edge_size = edge_size
         self.m_extra_rot = extra_rot
         self.m_residuals = residuals
 
+<<<<<<< HEAD
+=======
+        if isinstance(pca_number, int):
+            self.m_pca_number = [pca_number]
+        else:
+            self.m_pca_number = pca_number
+
+>>>>>>> upstream/master
     @typechecked
     def run(self) -> None:
         """
@@ -301,11 +356,21 @@ class SimplexMinimizationModule(ProcessingModule):
             None
         """
 
+<<<<<<< HEAD
         self.m_res_out_port.del_all_data()
         self.m_res_out_port.del_all_attributes()
 
         self.m_flux_position_port.del_all_data()
         self.m_flux_position_port.del_all_attributes()
+=======
+        for item in self.m_res_out_port:
+            item.del_all_data()
+            item.del_all_attributes()
+
+        for item in self.m_flux_pos_port:
+            item.del_all_data()
+            item.del_all_attributes()
+>>>>>>> upstream/master
 
         parang = self.m_image_in_port.get_attribute('PARANG')
         pixscale = self.m_image_in_port.get_attribute('PIXSCALE')
@@ -335,6 +400,7 @@ class SimplexMinimizationModule(ProcessingModule):
             raise NotImplementedError('The reference_in_tag can only be used in combination with '
                                       'the \'poisson\' figure of merit.')
 
+<<<<<<< HEAD
         if self.m_reference_in_port is not None:
             ref_data = self.m_reference_in_port.get_all()
 
@@ -367,6 +433,9 @@ class SimplexMinimizationModule(ProcessingModule):
             sys.stdout.write('.')
             sys.stdout.flush()
 
+=======
+        def _objective(arg, count, n_components, sklearn_pca):
+>>>>>>> upstream/master
             pos_y = arg[0]
             pos_x = arg[1]
             mag = arg[2]
@@ -385,8 +454,13 @@ class SimplexMinimizationModule(ProcessingModule):
             if self.m_reference_in_port is None:
                 im_res_rot, im_res_derot = pca_psf_subtraction(images=fake*mask,
                                                                angles=-1.*parang+self.m_extra_rot,
+<<<<<<< HEAD
                                                                pca_number=self.m_pca_number,
                                                                pca_sklearn=None,
+=======
+                                                               pca_number=n_components,
+                                                               pca_sklearn=sklearn_pca,
+>>>>>>> upstream/master
                                                                im_shape=None,
                                                                indices=None)
 
@@ -395,7 +469,11 @@ class SimplexMinimizationModule(ProcessingModule):
 
                 im_res_rot, im_res_derot = pca_psf_subtraction(images=im_reshape,
                                                                angles=-1.*parang+self.m_extra_rot,
+<<<<<<< HEAD
                                                                pca_number=self.m_pca_number,
+=======
+                                                               pca_number=n_components,
+>>>>>>> upstream/master
                                                                pca_sklearn=sklearn_pca,
                                                                im_shape=im_shape,
                                                                indices=None)
@@ -405,7 +483,11 @@ class SimplexMinimizationModule(ProcessingModule):
                                           residuals=im_res_rot,
                                           angles=parang)
 
+<<<<<<< HEAD
             self.m_res_out_port.append(res_stack, data_dim=3)
+=======
+            self.m_res_out_port[count].append(res_stack, data_dim=3)
+>>>>>>> upstream/master
 
             chi_square = merit_function(residuals=res_stack[0, ],
                                         merit=self.m_merit,
@@ -421,33 +503,100 @@ class SimplexMinimizationModule(ProcessingModule):
                               mag,
                               chi_square])
 
+<<<<<<< HEAD
             self.m_flux_position_port.append(res, data_dim=2)
 
             return chi_square
 
         sys.stdout.write('Running SimplexMinimizationModule')
         sys.stdout.flush()
+=======
+            self.m_flux_pos_port[count].append(res, data_dim=2)
+
+            sys.stdout.write('\rSimplex minimization... ')
+            sys.stdout.write(f'{n_components} PC - chi^2 = {chi_square:.8E}')
+            sys.stdout.flush()
+
+            return chi_square
+>>>>>>> upstream/master
 
         pos_init = rotate_coordinates(center,
                                       (self.m_position[1], self.m_position[0]),  # (y, x)
                                       self.m_extra_rot)
 
+<<<<<<< HEAD
         minimize(fun=_objective,
                  x0=[pos_init[0], pos_init[1], self.m_magnitude],
                  method='Nelder-Mead',
                  tol=None,
                  options={'xatol': self.m_tolerance, 'fatol': float('inf')})
+=======
+        for i, n_components in enumerate(self.m_pca_number):
+            sys.stdout.write(f'\rSimplex minimization... {n_components} PC ')
+            sys.stdout.flush()
+
+            if self.m_reference_in_port is None:
+                sklearn_pca = None
+
+            else:
+                ref_data = self.m_reference_in_port.get_all()
+
+                im_shape = images.shape
+                ref_shape = ref_data.shape
+
+                if ref_shape[1:] != im_shape[1:]:
+                    raise ValueError('The image size of the science data and the reference data '
+                                     'should be identical.')
+
+                # reshape reference data and select the unmasked pixels
+                ref_reshape = ref_data.reshape(ref_shape[0], ref_shape[1]*ref_shape[2])
+
+                mean_ref = np.mean(ref_reshape, axis=0)
+                ref_reshape -= mean_ref
+
+                # create the PCA basis
+                sklearn_pca = PCA(n_components=n_components, svd_solver='arpack')
+                sklearn_pca.fit(ref_reshape)
+
+                # add mean of reference array as 1st PC and orthogonalize it to the PCA basis
+                mean_ref_reshape = mean_ref.reshape((1, mean_ref.shape[0]))
+
+                q_ortho, _ = np.linalg.qr(np.vstack((mean_ref_reshape,
+                                                     sklearn_pca.components_[:-1, ])).T)
+
+                sklearn_pca.components_ = q_ortho.T
+
+            minimize(fun=_objective,
+                     x0=[pos_init[0], pos_init[1], self.m_magnitude],
+                     args=(i, n_components, sklearn_pca),
+                     method='Nelder-Mead',
+                     tol=None,
+                     options={'xatol': self.m_tolerance, 'fatol': float('inf')})
+>>>>>>> upstream/master
 
         sys.stdout.write(' [DONE]\n')
         sys.stdout.flush()
 
         history = f'merit = {self.m_merit}'
+<<<<<<< HEAD
         self.m_flux_position_port.copy_attributes(self.m_image_in_port)
         self.m_flux_position_port.add_history('SimplexMinimizationModule', history)
 
         self.m_res_out_port.copy_attributes(self.m_image_in_port)
         self.m_res_out_port.add_history('SimplexMinimizationModule', history)
         self.m_res_out_port.close_port()
+=======
+
+        for item in self.m_flux_pos_port:
+            item.copy_attributes(self.m_image_in_port)
+            item.add_history('SimplexMinimizationModule', history)
+
+        for item in self.m_res_out_port:
+            item.copy_attributes(self.m_image_in_port)
+            item.add_history('SimplexMinimizationModule', history)
+
+        self.m_res_out_port[0].close_port()
+>>>>>>> upstream/master
 
 
 class FalsePositiveModule(ProcessingModule):
@@ -468,14 +617,23 @@ class FalsePositiveModule(ProcessingModule):
                  aperture: float = 0.1,
                  ignore: bool = False,
                  optimize: bool = False,
+<<<<<<< HEAD
                  **kwargs: Union[float, Tuple[Tuple[float, float], Tuple[float, float]]]) -> None:
+=======
+                 **kwargs) -> None:
+>>>>>>> upstream/master
         """
         Parameters
         ----------
         name_in : str
             Unique name of the module instance.
         image_in_tag : str
+<<<<<<< HEAD
             Tag of the database entry with the images that are read as input.
+=======
+            Tag of the database entry with the images that are read as input. The SNR/FPF is
+            calculated for each image in the dataset.
+>>>>>>> upstream/master
         snr_out_tag : str
             Tag of the database entry that is written as output. The output format is: (x position
             (pix), y position (pix), separation (arcsec), position angle (deg), SNR, FPF). The
@@ -491,17 +649,29 @@ class FalsePositiveModule(ProcessingModule):
         ignore : bool
             Ignore the two neighboring apertures that may contain self-subtraction from the planet.
         optimize : bool
+<<<<<<< HEAD
             Optimize the SNR. The aperture position is written in the history. The size of the
+=======
+            Optimize the SNR. The aperture position is stored in the `snr_out_tag`. The size of the
+>>>>>>> upstream/master
             aperture is kept fixed.
 
         Keyword arguments
         -----------------
         tolerance : float
+<<<<<<< HEAD
             The fractional tolerance on the position for the optimization to end. Default is set
             to 1e-3.
         bounds : tuple(tuple(float, float), tuple(float, float))
             Boundaries (pix) for the horizontal and vertical offset with respect to the `position`.
             The default is set to (-3, 3) for both directions.
+=======
+            The absolute tolerance on the position for the optimization to end. Default is set
+            to 0.01 (pix).
+        offset : float, None
+            Offset (pix) by which the aperture may deviate from ``position`` when
+            ``optimize=True`` (default: None).
+>>>>>>> upstream/master
 
         Returns
         -------
@@ -512,12 +682,25 @@ class FalsePositiveModule(ProcessingModule):
         if 'tolerance' in kwargs:
             self.m_tolerance = kwargs['tolerance']
         else:
+<<<<<<< HEAD
             self.m_tolerance = 1e-3
 
         if 'bounds' in kwargs:
             self.m_bounds = kwargs['bounds']
         else:
             self.m_bounds = ((-3., 3.), (-3., 3.))
+=======
+            self.m_tolerance = 1e-2
+
+        if 'offset' in kwargs:
+            self.m_offset = kwargs['offset']
+        else:
+            self.m_offset = None
+
+        if 'bounds' in kwargs:
+            warnings.warn('The \'bounds\' keyword argument has been deprecated. Please use '
+                          '\'offset\' instead (e.g. offset=3.0).', DeprecationWarning)
+>>>>>>> upstream/master
 
         super(FalsePositiveModule, self).__init__(name_in)
 
@@ -545,11 +728,32 @@ class FalsePositiveModule(ProcessingModule):
         def _snr_optimize(arg):
             pos_x, pos_y = arg
 
+<<<<<<< HEAD
             _, _, snr, _ = false_alarm(image=image,
                                        x_pos=pos_x,
                                        y_pos=pos_y,
                                        size=self.m_aperture,
                                        ignore=self.m_ignore)
+=======
+            if self.m_offset is not None:
+                if pos_x < self.m_position[0] - self.m_offset or \
+                        pos_x > self.m_position[0] + self.m_offset:
+                    snr = 0.
+
+                elif pos_y < self.m_position[1] - self.m_offset or \
+                        pos_y > self.m_position[1] + self.m_offset:
+                    snr = 0.
+
+                else:
+                    snr = None
+
+            if self.m_offset is None or snr is None:
+                _, _, snr, _ = false_alarm(image=image,
+                                           x_pos=pos_x,
+                                           y_pos=pos_y,
+                                           size=self.m_aperture,
+                                           ignore=self.m_ignore)
+>>>>>>> upstream/master
 
             return -snr
 
@@ -561,12 +765,19 @@ class FalsePositiveModule(ProcessingModule):
 
         nimages = self.m_image_in_port.get_shape()[0]
 
+<<<<<<< HEAD
         bounds = ((self.m_position[0]+self.m_bounds[0][0], self.m_position[0]+self.m_bounds[0][1]),
                   (self.m_position[1]+self.m_bounds[1][0], self.m_position[1]+self.m_bounds[1][1]))
 
         start_time = time.time()
         for j in range(nimages):
             progress(j, nimages, 'Running FalsePositiveModule...', start_time)
+=======
+        start_time = time.time()
+
+        for j in range(nimages):
+            progress(j, nimages, 'Calculating S/N and FPF...', start_time)
+>>>>>>> upstream/master
 
             image = self.m_image_in_port[j, ]
             center = center_subpixel(image)
@@ -574,10 +785,16 @@ class FalsePositiveModule(ProcessingModule):
             if self.m_optimize:
                 result = minimize(fun=_snr_optimize,
                                   x0=[self.m_position[0], self.m_position[1]],
+<<<<<<< HEAD
                                   method='SLSQP',
                                   bounds=bounds,
                                   tol=None,
                                   options={'ftol': self.m_tolerance})
+=======
+                                  method='Nelder-Mead',
+                                  tol=None,
+                                  options={'xatol': self.m_tolerance, 'fatol': float('inf')})
+>>>>>>> upstream/master
 
                 _, _, snr, fpf = false_alarm(image=image,
                                              x_pos=result.x[0],
@@ -601,9 +818,12 @@ class FalsePositiveModule(ProcessingModule):
 
             self.m_snr_out_port.append(result, data_dim=2)
 
+<<<<<<< HEAD
         sys.stdout.write('Running FalsePositiveModule... [DONE]\n')
         sys.stdout.flush()
 
+=======
+>>>>>>> upstream/master
         history = f'aperture [arcsec] = {self.m_aperture*pixscale:.2f}'
         self.m_snr_out_port.copy_attributes(self.m_image_in_port)
         self.m_snr_out_port.add_history('FalsePositiveModule', history)
@@ -650,7 +870,12 @@ class MCMCsamplingModule(ProcessingModule):
             either a single image (2D) or a cube (3D) with the dimensions equal to *image_in_tag*.
         chain_out_tag : str
             Tag of the database entry with the Markov chain that is written as output. The shape
+<<<<<<< HEAD
             of the array is (nwalkers*nsteps, 3).
+=======
+            of the array is (nsteps, nwalkers, 3). The mean acceptance fraction and the integrated
+            autocorrelation time are stored as attributes to this dataset.
+>>>>>>> upstream/master
         param : tuple(float, float, float)
             The approximate separation (arcsec), angle (deg), and contrast (mag), for example
             obtained with the :class:`~pynpoint.processing.fluxposition.SimplexMinimizationModule`.
@@ -675,7 +900,12 @@ class MCMCsamplingModule(ProcessingModule):
         mask : tuple(float, float), None
             Inner and outer mask radius (arcsec) for the PSF subtraction. Both elements of the
             tuple can be set to None. Masked pixels are excluded from the PCA computation,
+<<<<<<< HEAD
             resulting in a smaller runtime.
+=======
+            resulting in a smaller runtime. Masking is done after the artificial planet is
+            injected.
+>>>>>>> upstream/master
         extra_rot : float
             Additional rotation angle of the images (deg).
         merit : str
@@ -690,8 +920,11 @@ class MCMCsamplingModule(ProcessingModule):
 
         Keyword arguments
         -----------------
+<<<<<<< HEAD
         scale : float
             The proposal scale parameter (Goodman & Weare 2010). The default is set to 2.
+=======
+>>>>>>> upstream/master
         sigma : tuple(float, float, float)
             The standard deviations that randomly initializes the start positions of the walkers in
             a small ball around the a priori preferred position. The tuple should contain a value
@@ -711,11 +944,14 @@ class MCMCsamplingModule(ProcessingModule):
             warnings.warn('The \'variance\' parameter has been deprecated. Please use the '
                           '\'merit\' parameter instead.', DeprecationWarning)
 
+<<<<<<< HEAD
         if 'scale' in kwargs:
             self.m_scale = kwargs['scale']
         else:
             self.m_scale = 2.
 
+=======
+>>>>>>> upstream/master
         if 'sigma' in kwargs:
             self.m_sigma = kwargs['sigma']
         else:
@@ -805,6 +1041,7 @@ class MCMCsamplingModule(ProcessingModule):
         initial[:, 1] = self.m_param[1] + np.random.normal(0, self.m_sigma[1], self.m_nwalkers)
         initial[:, 2] = self.m_param[2] + np.random.normal(0, self.m_sigma[2], self.m_nwalkers)
 
+<<<<<<< HEAD
         sampler = emcee.EnsembleSampler(nwalkers=self.m_nwalkers,
                                         dim=ndim,
                                         lnpostfn=lnprob,
@@ -830,15 +1067,44 @@ class MCMCsamplingModule(ProcessingModule):
 
         sys.stdout.write('Running MCMCsamplingModule... [DONE]\n')
         sys.stdout.flush()
+=======
+        print('Sampling the posterior distributions with MCMC...')
+
+        with Pool(processes=cpu) as pool:
+            sampler = emcee.EnsembleSampler(self.m_nwalkers,
+                                            ndim,
+                                            lnprob,
+                                            pool=pool,
+                                            args=([self.m_bounds,
+                                                   images,
+                                                   psf,
+                                                   mask,
+                                                   parang,
+                                                   self.m_psf_scaling,
+                                                   pixscale,
+                                                   self.m_pca_number,
+                                                   self.m_extra_rot,
+                                                   aperture,
+                                                   indices,
+                                                   self.m_merit,
+                                                   self.m_residuals]))
+
+            sampler.run_mcmc(initial, self.m_nsteps, progress=True)
+>>>>>>> upstream/master
 
         self.m_image_in_port._check_status_and_activate()
         self.m_chain_out_port._check_status_and_activate()
 
+<<<<<<< HEAD
         self.m_chain_out_port.set_all(sampler.chain)
+=======
+        self.m_chain_out_port.set_all(sampler.get_chain())
+>>>>>>> upstream/master
 
         history = f'walkers = {self.m_nwalkers}, steps = {self.m_nsteps}'
         self.m_chain_out_port.copy_attributes(self.m_image_in_port)
         self.m_chain_out_port.add_history('MCMCsamplingModule', history)
+<<<<<<< HEAD
         self.m_chain_out_port.close_port()
 
         print(f'Mean acceptance fraction: {np.mean(sampler.acceptance_fraction):.3f}')
@@ -858,6 +1124,27 @@ class MCMCsamplingModule(ProcessingModule):
         except emcee.autocorr.AutocorrError:
             print('The chain is too short to reliably estimate the autocorrelation time. [WARNING]')
 
+=======
+
+        mean_accept = np.mean(sampler.acceptance_fraction)
+        print(f'Mean acceptance fraction: {mean_accept:.3f}')
+        self.m_chain_out_port.add_attribute('ACCEPTANCE', mean_accept, static=True)
+
+        try:
+            autocorr = emcee.autocorr.integrated_time(sampler.get_chain())
+            print(f'Integrated autocorrelation time ={autocorr}')
+
+        except emcee.autocorr.AutocorrError:
+            autocorr = [np.nan, np.nan, np.nan]
+            print('The chain is too short to reliably estimate the autocorrelation time. [WARNING]')
+
+        self.m_chain_out_port.add_attribute('AUTOCORR_0', autocorr[0], static=True)
+        self.m_chain_out_port.add_attribute('AUTOCORR_1', autocorr[1], static=True)
+        self.m_chain_out_port.add_attribute('AUTOCORR_2', autocorr[2], static=True)
+
+        self.m_chain_out_port.close_port()
+
+>>>>>>> upstream/master
 
 class AperturePhotometryModule(ProcessingModule):
     """
@@ -936,10 +1223,216 @@ class AperturePhotometryModule(ProcessingModule):
         self.apply_function_to_images(_photometry,
                                       self.m_image_in_port,
                                       self.m_phot_out_port,
+<<<<<<< HEAD
                                       'Running AperturePhotometryModule',
+=======
+                                      'Aperture photometry',
+>>>>>>> upstream/master
                                       func_args=(aperture, ))
 
         history = f'radius [arcsec] = {self.m_radius*pixscale:.3f}'
         self.m_phot_out_port.copy_attributes(self.m_image_in_port)
         self.m_phot_out_port.add_history('AperturePhotometryModule', history)
         self.m_phot_out_port.close_port()
+<<<<<<< HEAD
+=======
+
+
+class SystematicErrorModule(ProcessingModule):
+    """
+    Pipeline module for estimating the systematic error of the flux and position measurement.
+    """
+
+    __author__ = 'Tomas Stolker'
+
+    @typechecked
+    def __init__(self,
+                 name_in: str,
+                 image_in_tag: str,
+                 psf_in_tag: str,
+                 offset_out_tag: str,
+                 position: Tuple[float, float],
+                 magnitude: float,
+                 n_angles: int = 360,
+                 psf_scaling: float = 1.,
+                 merit: str = 'gaussian',
+                 aperture: float = 0.1,
+                 tolerance: float = 0.01,
+                 pca_number: int = 10,
+                 mask: Union[Tuple[float, float], Tuple[None, float],
+                             Tuple[float, None], Tuple[None, None]] = None,
+                 extra_rot: float = 0.,
+                 residuals: str = 'median') -> None:
+        """
+        Parameters
+        ----------
+        name_in : str
+            Unique name of the module instance.
+        image_in_tag : str
+            Tag of the database entry with the science images for which the systematic error is
+            estimated.
+        psf_in_tag : str
+            Tag of the database entry with the PSF template that is used as fake planet. Can be
+            either a single image or a stack of images equal in size to ``image_in_tag``.
+        offset_out_tag : str
+            Tag of the database entry at which the differences are stored between the injected and
+            and retrieved values of the separation (arcsec), position angle (deg), and contrast
+            (mag).
+        position : tuple(float, float)
+            Separation (arcsec) and position angle (deg) that are used to remove the planet signal.
+            The separation is also used to estimate the systematic error.
+        magnitude : float
+            Magnitude that is used to remove the planet signal and estimate the systematic error.
+        n_angles : int
+            Number of position angles (linearly sampled) that are used to estimate the systematic
+            errors.
+        psf_scaling : float
+            Additional scaling factor of the planet flux (e.g., to correct for a neutral density
+            filter). Should be a positive value.
+        merit : str
+            Figure of merit that is used for the likelihood function ('gaussian' or 'poisson').
+            Pixels are assumed to be independent measurements which are expected to be equal to
+            zero in case the best-fit negative PSF template is injected. With 'gaussian', the
+            variance is estimated from the pixel values within an annulus at the separation of
+            the aperture (but excluding the pixels within the aperture). With 'poisson', a Poisson
+            distribution is assumed for the variance of each pixel value (see Wertz et al. 2017).
+        aperture : float
+            Aperture radius (arcsec) that is used for measuring the figure of merit.
+        tolerance : float
+            Absolute error on the input parameters, position (pix) and contrast (mag), that is used
+            as acceptance level for convergence. Note that only a single value can be specified
+            which is used for both the position and flux so tolerance=0.1 will give a precision of
+            0.1 mag and 0.1 pix. The tolerance on the output (i.e., the chi-square value) is set to
+            np.inf so the condition is always met.
+        pca_number : int
+            Number of principal components (PCs) used for the PSF subtraction.
+        mask : tuple(float, float), None
+            Inner and outer mask radius (arcsec) which is applied before the PSF subtraction. Both
+            elements of the tuple can be set to None.
+        extra_rot : float
+            Additional rotation angle of the images in clockwise direction (deg).
+        residuals : str
+            Method for combining the residuals ('mean', 'median', 'weighted', or 'clipped').
+
+        Returns
+        -------
+        NoneType
+            None
+        """
+
+        super(SystematicErrorModule, self).__init__(name_in)
+
+        self.m_image_in_tag = image_in_tag
+        self.m_psf_in_tag = psf_in_tag
+
+        self.m_image_in_port = self.add_input_port(image_in_tag)
+        self.m_offset_out_port = self.add_output_port(offset_out_tag)
+
+        self.m_position = position
+        self.m_magnitude = magnitude
+        self.m_n_angles = n_angles
+        self.m_psf_scaling = psf_scaling
+        self.m_merit = merit
+        self.m_aperture = aperture
+        self.m_tolerance = tolerance
+        self.m_mask = mask
+        self.m_extra_rot = extra_rot
+        self.m_residuals = residuals
+        self.m_pca_number = pca_number
+
+    @typechecked
+    def run(self) -> None:
+        """
+        Run method of the module. Removes the planet signal, then artificial planets are injected
+        (one at a time) at equally separated position angles and their position and contrast is
+        determined with the :class:`~pynpoint.processing.fluxposition.SimplexMinimizationModule`.
+        The differences between the injected and retrieved separation, position angle, and contrast
+        are then stored as output.
+
+        Returns
+        -------
+        NoneType
+            None
+        """
+
+        self.m_offset_out_port.del_all_data()
+        self.m_offset_out_port.del_all_attributes()
+
+        pixscale = self.m_image_in_port.get_attribute('PIXSCALE')
+        image = self.m_image_in_port[0, ]
+
+        module = FakePlanetModule(name_in=f'{self._m_name}_fake',
+                                  image_in_tag=self.m_image_in_tag,
+                                  psf_in_tag=self.m_psf_in_tag,
+                                  image_out_tag=f'{self._m_name}_empty',
+                                  position=self.m_position,
+                                  magnitude=self.m_magnitude,
+                                  psf_scaling=-self.m_psf_scaling)
+
+        module.connect_database(self._m_data_base)
+        module.run()
+
+        sep = float(self.m_position[0])
+        angles = np.linspace(0., 360., self.m_n_angles, endpoint=False)
+
+        for i, ang in enumerate(angles):
+            print(f'Processing position angle: {i} deg...')
+
+            module = FakePlanetModule(position=(sep, ang),
+                                      magnitude=self.m_magnitude,
+                                      psf_scaling=self.m_psf_scaling,
+                                      name_in=f'{self._m_name}_fake_{i}',
+                                      image_in_tag=f'{self._m_name}_empty',
+                                      psf_in_tag=self.m_psf_in_tag,
+                                      image_out_tag=f'{self._m_name}_fake')
+
+            module.connect_database(self._m_data_base)
+            module.run()
+
+            position = polar_to_cartesian(image, sep/pixscale, ang)
+            position = (int(round(position[1])), int(round(position[0])))
+
+            module = SimplexMinimizationModule(position=position,
+                                               magnitude=self.m_magnitude,
+                                               psf_scaling=-self.m_psf_scaling,
+                                               name_in=f'{self._m_name}_fake_{i}',
+                                               image_in_tag=f'{self._m_name}_fake',
+                                               psf_in_tag=self.m_psf_in_tag,
+                                               res_out_tag=f'{self._m_name}_simplex',
+                                               flux_position_tag=f'{self._m_name}_fluxpos',
+                                               merit=self.m_merit,
+                                               aperture=self.m_aperture,
+                                               sigma=0.,
+                                               tolerance=self.m_tolerance,
+                                               pca_number=self.m_pca_number,
+                                               cent_size=self.m_mask[0],
+                                               edge_size=self.m_mask[1],
+                                               extra_rot=self.m_extra_rot,
+                                               residuals='median')
+
+            module.connect_database(self._m_data_base)
+            module.run()
+
+            fluxpos_out_port = self.add_input_port(f'{self._m_name}_fluxpos')
+
+            data = [self.m_position[0] - fluxpos_out_port[-1, 2],
+                    ang - fluxpos_out_port[-1, 3],
+                    self.m_magnitude - fluxpos_out_port[-1, 4]]
+
+            if data[1] > 180.:
+                data[1] -= 360.
+            elif data[1] < -180.:
+                data[1] += 360.
+
+            print(f'Offset: {data[0]*1e3:.2f} mas, {data[1]:.2f} deg, {data[2]:.2f} mag')
+
+            self.m_offset_out_port.append(data, data_dim=2)
+
+        history = f'sep = {self.m_position[0]:.3f}, ' \
+                  f'pa = {self.m_position[1]:.1f}, ' \
+                  f'mag = {self.m_magnitude:.1f}'
+
+        self.m_offset_out_port.copy_attributes(self.m_image_in_port)
+        self.m_offset_out_port.add_history('SystematicErrorModule', history)
+        self.m_offset_out_port.close_port()
+>>>>>>> upstream/master
